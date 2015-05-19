@@ -1,4 +1,9 @@
 %insert(runtime) %{
+#ifdef _MSC_VER
+#define DLL_EXPORT_SYM __declspec(dllexport)
+#else
+#define DLL_EXPORT_SYM
+#endif
 #include <mex.h>
 #include <math.h> /* need this for floor() */
 %}
