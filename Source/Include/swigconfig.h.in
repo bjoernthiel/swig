@@ -1,0 +1,40 @@
+
+/* Define to 1 if the system has the type `bool'. */
+#cmakedefine HAVE_BOOL 1
+
+/* Define if you have PCRE library */
+#cmakedefine HAVE_PCRE 1
+
+/* Define if popen is available */
+#cmakedefine HAVE_POPEN 1
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#cmakedefine HAVE_STDLIB_H 1
+
+/* Define to 1 if you have the <strings.h> header file. */
+#cmakedefine HAVE_STRINGS_H 1
+
+/* Define to 1 if you have the <string.h> header file. */
+#cmakedefine HAVE_STRING_H 1
+
+/* Define to the address where bug reports for this package should be sent. */
+#cmakedefine PACKAGE_BUGREPORT "${PACKAGE_BUGREPORT}"
+
+/* Define to the full name of this package. */
+#cmakedefine PACKAGE_NAME "${PACKAGE_NAME}"
+
+/* Define to the version of this package. */
+#cmakedefine PACKAGE_VERSION "${PACKAGE_VERSION}"
+
+/* Compiler that built SWIG */
+#cmakedefine SWIG_CXX "${SWIG_CXX}"
+
+/* Directory for SWIG system-independent libraries */
+#cmakedefine SWIG_LIB "${SWIG_LIB}"
+
+/* Directory for SWIG system-independent libraries (Unix install on native
+   Windows) */
+#cmakedefine SWIG_LIB_WIN_UNIX "${SWIG_LIB_WIN_UNIX}"
+
+/* Platform that SWIG is built for */
+#cmakedefine SWIG_PLATFORM "${SWIG_PLATFORM}"
