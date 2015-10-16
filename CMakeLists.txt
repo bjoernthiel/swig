@@ -25,6 +25,7 @@ CHECK_INCLUDE_FILE( string.h HAVE_STRING_H )
 
 if( MSVC )
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_CRT_SECURE_NO_WARNINGS" )
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4800" ) # conversion to bool
 endif()
 
 add_subdirectory( Source )

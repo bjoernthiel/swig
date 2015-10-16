@@ -329,7 +329,6 @@ int MATLAB::top(Node *n) {
     SWIG_exit(EXIT_FAILURE);
   }
 
-  mex_fcn=NewString(module);
   /* The name of the compiled mex-wrapper is modulenameMEX by default, but this
    can be overridden by setting the mexname opion */
   if (!mex_name) {
@@ -1392,7 +1391,7 @@ int MATLAB::constantWrapper(Node *n) {
     // Continue getter function
     Printf(static_methods,"      persistent vInitialized;\n");
     Printf(static_methods,"      if isempty(vInitialized)\n");
-    Printf(static_methods,"        vInitialized = %s(0,'swigConstant',%d,'%s');\n",mex_fcn,con_id,symname);
+    Printf(static_methods,"        vInitialized = %s(0,'swigConstant',%d,'%s');\n",mex_name,con_id,symname);
     Printf(static_methods,"      end\n");
     Printf(static_methods,"      v = vInitialized;\n");
     Printf(static_methods,"    end\n");
