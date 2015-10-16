@@ -3,9 +3,26 @@ configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/Include/swigconfig.h.in
 	${CMAKE_CURRENT_BINARY_DIR}/Include/swigconfig.h )
 
+if( MSVC )
+	set( ProgramFiles_x86 "ProgramFiles(x86)" )
+	list( APPEND CMAKE_PROGRAM_PATH "$ENV{${ProgramFiles_x86}}/Git/bin" )
+endif()
+find_program( bison_EXECUTABLE bison )
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/CParse/parser.c
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CParse/parser.y
+	COMMAND ${bison_EXECUTABLE} 
+		-o ${CMAKE_CURRENT_BINARY_DIR}/CParse/parser.c 
+		--defines=${CMAKE_CURRENT_BINARY_DIR}/Include/parser.h 
+		${CMAKE_CURRENT_SOURCE_DIR}/CParse/parser.y )
+set_source_files_properties( 
+	${CMAKE_CURRENT_BINARY_DIR}/CParse/parser.c
+	${CMAKE_CURRENT_BINARY_DIR}/CParse/parser.h
+	PROPERTIES GENERATED TRUE )
+
 set( headers
 	CParse/cparse.h
-	CParse/parser.h
+	${CMAKE_CURRENT_BINARY_DIR}/CParse/parser.h
 	DOH/doh.h
 	DOH/dohint.h
 	Include/swigwarn.h
@@ -23,7 +40,7 @@ set( headers
 
 set( sources
 	CParse/cscanner.c
-	CParse/parser.c
+	${CMAKE_CURRENT_BINARY_DIR}/CParse/parser.c
 	CParse/templ.c
 	CParse/util.c
 	DOH/base.c
@@ -99,7 +116,7 @@ add_executable( swig ${headers} ${sources} )
 target_include_directories( swig
 	PRIVATE
 		${CMAKE_CURRENT_BINARY_DIR}/Include
-#		-I$(BUILD_SOURCE_DIR)/CParse	\
+		${CMAKE_CURRENT_BINARY_DIR}/CParse
 		Include
 		DOH
 		CParse
