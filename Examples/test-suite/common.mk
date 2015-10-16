@@ -33,9 +33,7 @@
 # can be used for memory checking of the runtime tests using:
 #   make RUNTOOL="valgrind --leak-check=full"
 # and valgrind can be used when invoking SWIG using:
-#   make SWIGTOOL="valgrind --tool=memcheck --trace-children=yes"
-#    Note: trace-children needed because of preinst-swig shell wrapper
-#    to the swig executable.
+#   make SWIGTOOL="valgrind --tool=memcheck"
 #
 # An individual test run can be debugged easily:
 #   make director_string.cpptest RUNTOOL="gdb --args"
@@ -56,8 +54,8 @@ endif
 COMPILETOOL=
 SWIGTOOL   =
 
-SWIG       = $(SWIGTOOL) $(top_builddir)/preinst-swig
-SWIG_LIB   = $(top_srcdir)/Lib
+SWIGEXE   = $(top_builddir)/swig
+SWIG_LIB_DIR = $(top_srcdir)/Lib
 TEST_SUITE = test-suite
 EXAMPLES   = Examples
 CXXSRCS    = 
@@ -138,6 +136,7 @@ CPP_TEST_CASES += \
 	casts \
 	char_binary \
 	char_strings \
+	chartest \
 	class_forward \
 	class_ignore \
 	class_scope_weird \
@@ -156,6 +155,7 @@ CPP_TEST_CASES += \
 	conversion \
 	conversion_namespace \
 	conversion_ns_template \
+	conversion_operators \
 	cplusplus_throw \
 	cpp_basic \
 	cpp_enum \
@@ -198,6 +198,7 @@ CPP_TEST_CASES += \
 	director_protected \
 	director_protected_overloaded \
 	director_redefined \
+	director_ref \
 	director_smartptr \
 	director_thread \
 	director_unroll \
@@ -233,6 +234,7 @@ CPP_TEST_CASES += \
 	features \
 	fragments \
 	friends \
+	friends_template \
 	funcptr_cpp \
 	fvirtual \
 	global_namespace \
@@ -243,6 +245,7 @@ CPP_TEST_CASES += \
 	ignore_parameter \
 	import_nomodule \
 	inherit \
+	inherit_member \
 	inherit_missing \
 	inherit_same_name \
 	inherit_target_language \
@@ -308,6 +311,7 @@ CPP_TEST_CASES += \
 	operator_pointer_ref \
 	operbool \
 	ordering \
+	overload_arrays \
 	overload_bool \
 	overload_copy \
 	overload_extend \
@@ -368,6 +372,7 @@ CPP_TEST_CASES += \
 	smart_pointer_templatevariables \
 	smart_pointer_typedef \
 	special_variables \
+	special_variable_attributes \
 	special_variable_macros \
 	static_array_member \
 	static_const_member \
@@ -388,6 +393,7 @@ CPP_TEST_CASES += \
 	template_default \
 	template_default2 \
 	template_default_arg \
+	template_default_arg_overloaded \
 	template_default_arg_virtual_destructor \
 	template_default_class_parms \
 	template_default_class_parms_typedef \
@@ -406,6 +412,7 @@ CPP_TEST_CASES += \
 	template_inherit \
 	template_inherit_abstract \
 	template_int_const \
+	template_keyword_in_type \
 	template_methods \
 	template_namespace_forward_declaration \
 	template_using_directive_and_declaration_forward \
@@ -539,6 +546,7 @@ CPP11_TEST_CASES = \
 	cpp11_template_explicit \
 	cpp11_template_typedefs \
 	cpp11_type_traits \
+	cpp11_type_aliasing \
 	cpp11_uniform_initialization \
 	cpp11_unrestricted_unions \
 	cpp11_userdefined_literals \
@@ -698,37 +706,37 @@ partialcheck:
 	$(MAKE) check CC=true CXX=true LDSHARED=true CXXSHARED=true RUNTOOL=true COMPILETOOL=true
 
 swig_and_compile_cpp =  \
-	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR="$(SRCDIR)" CXXSRCS="$(CXXSRCS)" \
-	SWIG_LIB="$(SWIG_LIB)" SWIG="$(SWIG)" \
-	INCLUDES="$(INCLUDES)" SWIGOPT="$(SWIGOPT)" NOLINK=true \
-	TARGET="$(TARGETPREFIX)$*$(TARGETSUFFIX)" INTERFACEDIR="$(INTERFACEDIR)" INTERFACE="$*.i" \
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' \
+	SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	TARGET='$(TARGETPREFIX)$*$(TARGETSUFFIX)' INTERFACEDIR='$(INTERFACEDIR)' INTERFACE='$*.i' \
 	$(LANGUAGE)$(VARIANT)_cpp
 
 swig_and_compile_c =  \
-	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR="$(SRCDIR)" CSRCS="$(CSRCS)" \
-	SWIG_LIB="$(SWIG_LIB)" SWIG="$(SWIG)" \
-	INCLUDES="$(INCLUDES)" SWIGOPT="$(SWIGOPT)" NOLINK=true \
-	TARGET="$(TARGETPREFIX)$*$(TARGETSUFFIX)" INTERFACEDIR="$(INTERFACEDIR)" INTERFACE="$*.i" \
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CSRCS='$(CSRCS)' \
+	SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	TARGET='$(TARGETPREFIX)$*$(TARGETSUFFIX)' INTERFACEDIR='$(INTERFACEDIR)' INTERFACE='$*.i' \
 	$(LANGUAGE)$(VARIANT)
 
 swig_and_compile_multi_cpp = \
 	for f in `cat $(top_srcdir)/$(EXAMPLES)/$(TEST_SUITE)/$*.list` ; do \
-	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR="$(SRCDIR)" CXXSRCS="$(CXXSRCS)" \
-	  SWIG_LIB="$(SWIG_LIB)" SWIG="$(SWIG)" LIBS='$(LIBS)' \
-	  INCLUDES="$(INCLUDES)" SWIGOPT="$(SWIGOPT)" NOLINK=true \
-	  TARGET="$(TARGETPREFIX)$${f}$(TARGETSUFFIX)" INTERFACEDIR="$(INTERFACEDIR)" INTERFACE="$$f.i" \
+	  $(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' \
+	  SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	  LIBS='$(LIBS)' INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	  TARGET="$(TARGETPREFIX)$${f}$(TARGETSUFFIX)" INTERFACEDIR='$(INTERFACEDIR)' INTERFACE="$$f.i" \
 	  $(LANGUAGE)$(VARIANT)_cpp; \
 	done
 
 swig_and_compile_external =  \
-	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR="$(SRCDIR)" \
-	SWIG_LIB="$(SWIG_LIB)" SWIG="$(SWIG)" \
-	TARGET="$*_wrap_hdr.h" \
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' \
+	SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	TARGET='$*_wrap_hdr.h' \
 	$(LANGUAGE)$(VARIANT)_externalhdr; \
-	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR="$(SRCDIR)" CXXSRCS="$(CXXSRCS) $*_external.cxx" \
-	SWIG_LIB="$(SWIG_LIB)" SWIG="$(SWIG)" \
-	INCLUDES="$(INCLUDES)" SWIGOPT="$(SWIGOPT)" NOLINK=true \
-	TARGET="$(TARGETPREFIX)$*$(TARGETSUFFIX)" INTERFACEDIR="$(INTERFACEDIR)" INTERFACE="$*.i" \
+	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS) $*_external.cxx' \
+	SWIG_LIB_DIR='$(SWIG_LIB_DIR)' SWIGEXE='$(SWIGEXE)' \
+	INCLUDES='$(INCLUDES)' SWIGOPT='$(SWIGOPT)' NOLINK=true \
+	TARGET='$(TARGETPREFIX)$*$(TARGETSUFFIX)' INTERFACEDIR='$(INTERFACEDIR)' INTERFACE='$*.i' \
 	$(LANGUAGE)$(VARIANT)_cpp
 
 swig_and_compile_runtime = \

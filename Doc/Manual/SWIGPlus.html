@@ -2101,13 +2101,13 @@ Therefore, earlier methods will shadow methods that appear later.
 </p>
 
 <p>
-When wrapping an overloaded function, there is a chance that you will get an error message like this:
+When wrapping an overloaded function, there is a chance that you will get a warning message like this:
 </p>
 
 <div class="shell">
 <pre>
-example.i:3: Warning 467: Overloaded foo(int) not supported (no type checking
-rule for 'int').
+example.i:3: Warning 467: Overloaded foo(int) not supported (incomplete type checking rule - 
+no precedence level in typecheck typemap for 'int').
 </pre>
 </div>
 
@@ -2116,7 +2116,8 @@ This error means that the target language module supports overloading,
 but for some reason there is no type-checking rule that can be used to
 generate a working dispatch function.  The resulting behavior is then
 undefined.  You should report this as a bug to the
-<a href="http://www.swig.org/bugs.html">SWIG bug tracking database</a>.
+<a href="http://www.swig.org/bugs.html">SWIG bug tracking database</a>
+if this is due to one of the typemaps supplied with SWIG.
 </p>
 
 <p>
@@ -3614,17 +3615,51 @@ and the second will take two integer arguments.
 </p>
 
 <p>
-Needless to say, SWIG's template support provides plenty of
-opportunities to break the universe.  That said, an important final
-point is that <b>SWIG does not perform extensive error checking of
-templates!</b> Specifically, SWIG does not perform type checking nor
-does it check to see if the actual contents of the template
-declaration make any sense.  Since the C++ compiler will hopefully
-check this when it compiles the resulting wrapper file, there is no
-practical reason for SWIG to duplicate this functionality (besides,
-none of the SWIG developers are masochistic enough to want to
-implement this right now).
+Needless to say, SWIG's template support provides plenty of opportunities to
+break the universe.  That said, an important final point is that <b>SWIG does
+not perform extensive error checking of templates!</b>  Specifically, SWIG does
+not perform type checking nor does it check to see if the actual contents of the
+template declaration make any sense.  Since the C++ compiler checks this when it
+compiles the resulting wrapper file, there is no practical reason for SWIG to
+duplicate this functionality.
 </p>
+
+<a name="SWIGPlus_template_nested_class_example"></a>
+<p>
+As SWIG's template support does not perform type checking <tt>%template</tt>
+can be used as early as after a template declaration.  You can, and rarely have
+to, use <tt>%template</tt> before the template parameters have been declared.
+For example:
+</p>
+
+<div class="code">
+<pre>
+template &lt;class T&gt; class OuterTemplateClass {};
+
+// The nested class OuterClass::InnerClass inherits from the template class
+// OuterTemplateClass&lt;OuterClass::InnerStruct&gt; and thus the template needs
+// to be expanded with %template before the OuterClass declaration.
+%template(OuterTemplateClass_OuterClass__InnerStruct)
+    OuterTemplateClass&lt;OuterClass::InnerStruct&gt;
+
+
+// Don't forget to use %feature("flatnested") for OuterClass::InnerStruct and
+// OuterClass::InnerClass if the target language doesn't support nested classes.
+class OuterClass {
+    public:
+        // Forward declarations:
+        struct InnerStruct;
+        class InnerClass;
+};
+
+struct OuterClass::InnerStruct {};
+
+// Expanding the template at this point with %template is too late as the
+// OuterClass::InnerClass declaration is processed inside OuterClass.
+
+class OuterClass::InnerClass : public OuterTemplateClass&lt;InnerStruct&gt; {};
+</pre>
+</div>
 
 <p>
 <b>Compatibility Note</b>:  The first implementation of template support relied heavily on
@@ -5000,6 +5035,12 @@ class Bar {
 </pre>
 </div>
 
+<p>
+If a nested class, within an outer class, has to be used as a template parameter within the outer class, then the template will
+have to be instantiated with <tt>%template</tt> before the beginning of the outer class.
+An example can be found in the
+<a href="#SWIGPlus_template_nested_class_example">Templates</a> section.
+</p>
 
 <p>
 <b>Compatibility Note:</b>

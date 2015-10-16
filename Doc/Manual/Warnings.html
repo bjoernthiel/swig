@@ -349,9 +349,9 @@ These can be overridden using command line options, for example:
 
 <div class="shell"><pre>
 $ swig -python -Fstandard example.i
-example.i:4: Syntax error in input.
+example.i:4: Syntax error in input(1).
 $ swig -python -Fmicrosoft example.i
-example.i(4) : Syntax error in input.
+example.i(4) : Syntax error in input(1).
 </pre></div>
 
 <H2><a name="Warnings_nn9"></a>15.9 Warning number reference</H2>
@@ -492,7 +492,7 @@ example.i(4) : Syntax error in input.
 <li>464. Unsupported constant value.
 <li>465. Unable to handle type <em>type</em>.
 <li>466. Unsupported variable type <em>type</em>.
-<li>467. Overloaded <em>declaration</em> not supported (no type checking rule for '<em>type</em>')
+<li>467. Overloaded <em>declaration</em> not supported (incomplete type checking rule - no precedence level in typecheck typemap for '<em>type</em>')
 <li>468. No 'throw' typemap defined for exception type <em>type</em>
 <li>469. No or improper directorin typemap defined for <em>type</em>
 <li>470. Thread/reentrant unsafe wrapping, consider returning by value instead.

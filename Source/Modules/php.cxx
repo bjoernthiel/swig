@@ -190,7 +190,7 @@ class PHP : public Language {
 	p = strchr(p, '"');
 	if (p) {
 	  ++p;
-	  Insert(action, p - Char(action), " TSRMLS_CC");
+	  Insert(action, (int)(p - Char(action)), " TSRMLS_CC");
 	}
       }
     }
@@ -473,6 +473,7 @@ public:
 
     if (directorsEnabled()) {
       // Insert director runtime
+      Swig_insert_file("director_common.swg", s_header);
       Swig_insert_file("director.swg", s_header);
     }
 
@@ -1721,7 +1722,7 @@ public:
 	      Printf(output, "\t\t\treturn new %s%s($r);\n", prefix, Getattr(classLookup(d), "sym:name"));
 	    } else {
 	      Printf(output, "\t\t\t$c = new stdClass();\n");
-	      Printf(output, "\t\t\t$c->"SWIG_PTR" = $r;\n");
+	      Printf(output, "\t\t\t$c->" SWIG_PTR " = $r;\n");
 	      Printf(output, "\t\t\treturn $c;\n");
 	    }
 	    Printf(output, "\t\t}\n\t\treturn $r;\n");
@@ -1731,7 +1732,8 @@ public:
 	  }
 	} else {
 	  Printf(output, "\t\tif (!is_resource($r)) return $r;\n");
-	  Printf(output, "\t\tswitch (get_resource_type($r)) {\n");
+	  String *wrapobj = NULL;
+	  String *common = NULL;
 	  Iterator i = First(ret_types);
 	  while (i.item) {
 	    SwigType *ret_type = i.item;
@@ -1751,22 +1753,43 @@ public:
 		continue;
 	      }
 	    }
-	    Printf(output, "\t\t");
-	    if (i.item) {
-	      Printf(output, "case '%s': ", mangled);
-	    } else {
-	      Printf(output, "default: ");
-	    }
 	    const char *classname = GetChar(class_node, "sym:name");
 	    if (!classname)
 	      classname = GetChar(class_node, "name");
+	    String * action = NewStringEmpty();
 	    if (classname)
-	      Printf(output, "return new %s%s($r);\n", prefix, classname);
+	      Printf(action, "return new %s%s($r);\n", prefix, classname);
             else
-	      Printf(output, "return $r;\n");
+	      Printf(action, "return $r;\n");
+	    if (!wrapobj) {
+		wrapobj = NewString("\t\tswitch (get_resource_type($r)) {\n");
+		common = action;
+	    } else {
+		if (common && Cmp(common, action) != 0) {
+		    Delete(common);
+		    common = NULL;
+		}
+	    }
+	    Printf(wrapobj, "\t\t");
+	    if (i.item) {
+	      Printf(wrapobj, "case '%s': ", mangled);
+	    } else {
+	      Printf(wrapobj, "default: ");
+	    }
+	    Printv(wrapobj, action, NIL);
+	    if (action != common) Delete(action);
 	    Delete(mangled);
 	  }
-	  Printf(output, "\t\t}\n");
+	  Printf(wrapobj, "\t\t}\n");
+	  if (common) {
+	      // All cases have the same action, so eliminate the switch
+	      // wrapper.
+	      Printf(output, "\t\t%s", common);
+	      Delete(common);
+	  } else {
+	      Printv(output, wrapobj, NIL);
+	  }
+	  Delete(wrapobj);
 	}
       } else {
 	if (non_void_return) {
@@ -2401,7 +2424,7 @@ done:
 	String *target = Swig_method_decl(0, decl, classname, parms, 0, 0);
 	const char * p = Char(target);
 	const char * comma = strchr(p, ',');
-	size_t ins = comma ? comma - p : Len(target) - 1;
+	int ins = comma ? (int)(comma - p) : Len(target) - 1;
 	Insert(target, ins, " TSRMLS_DC");
 
 	call = Swig_csuperclass_call(0, basetype, superparms);
@@ -2420,7 +2443,7 @@ done:
 	String *target = Swig_method_decl(0, decl, classname, parms, 0, 1);
 	const char * p = Char(target);
 	const char * comma = strchr(p, ',');
-	size_t ins = comma ? comma - p : Len(target) - 1;
+	int ins = comma ? (int)(comma - p) : Len(target) - 1;
 	Insert(target, ins, " TSRMLS_DC");
 
 	Printf(f_directors_h, "    %s;\n", target);
