@@ -12,27 +12,27 @@
 %rename(minus)          *::operator-;
 %rename(uminus)         *::operator-();
 %rename(uminus)         *::operator-() const;
-%rename(mtimes)           *::operator*;
+%rename(mtimes)         *::operator*;
 %rename(mrdivide)       *::operator/;
 %rename(mod)            *::operator%;
 // %rename(lshift)      *::operator<<;
 // %rename(rshift)      *::operator>>;
-%rename(TODOand)        *::operator&&; // TODO cannot rename "and"
-%rename(TODOor)         *::operator||;
-%rename(xor)            *::operator^;
+%rename("and")          *::operator&&;
+%rename("or")           *::operator||;
+%rename("xor")          *::operator^;
 //%rename(invert)       *::operator~;
 %rename(lt)             *::operator<;
 %rename(le)             *::operator<=;
 %rename(gt)             *::operator>;
 %rename(ge)             *::operator>=;
-%rename(isequal)        *::operator==;
+%rename(eq)             *::operator==;
 %rename(ne)             *::operator!=;
-%rename(TODOnot)        *::operator!;
+%rename("not")          *::operator!;
 // non-standard matlab
 %rename(TODOincr)       *::operator++;
 %rename(TODOdecr)       *::operator--;
-%rename(TODOparen)      *::operator();
-%rename(TODObrace)      *::operator[];
+%rename(paren)          *::operator();
+%rename(brace)          *::operator[];
 
 // Ignored inplace operators
 %ignoreoperator(PLUSEQ)     operator+=;

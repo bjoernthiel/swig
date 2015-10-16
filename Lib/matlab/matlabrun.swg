@@ -1,11 +1,12 @@
-SWIGRUNTIME bool SWIG_check_num_args(const char *func_name, int num_args, int max_args, int min_args, int varargs) {
-  if (num_args > max_args && !varargs)
-    mexWarnMsgIdAndTxt("SWIG:RuntimeError","function %s takes at most %i arguments", func_name, max_args);
-  else if (num_args < min_args)
-    mexWarnMsgIdAndTxt("SWIG:RuntimeError","function %s requires at least %i arguments", func_name, min_args);
-  else
-    return true;
-  return false;
+/* Last error */
+static int SWIG_lasterror_code = 0;
+static char SWIG_lasterror_msg[1024];
+SWIGRUNTIME void SWIG_Error(int code, const char *format, ...) {
+  SWIG_lasterror_code = code;
+  va_list arg;
+  va_start(arg, format);
+  vsnprintf(SWIG_lasterror_msg, sizeof(SWIG_lasterror_msg), format, arg);
+  va_end(arg);
 }
 
 SWIGRUNTIME const char* SWIG_ErrorType(int code) {
@@ -36,8 +37,15 @@ SWIGRUNTIME const char* SWIG_ErrorType(int code) {
   return "SWIG:UnknownError";
 }
 
-SWIGRUNTIME void SWIG_Error(int code, const char *msg) {
-  mexWarnMsgIdAndTxt(SWIG_ErrorType(code),msg);
+SWIGRUNTIME bool SWIG_check_num_args(const char *func_name, int num_args, int max_args, int min_args, int varargs) {
+  if (num_args > max_args && !varargs) {
+    SWIG_Error(SWIG_RuntimeError, "function %s takes at most %i arguments", func_name, max_args);
+  } else if (num_args < min_args) {
+    SWIG_Error(SWIG_RuntimeError, "function %s requires at least %i arguments", func_name, min_args);
+  } else {
+    return true;
+  }
+  return false;
 }
 
 #define SWIG_fail                                       goto fail
@@ -58,159 +66,314 @@ SWIGRUNTIME void SWIG_Error(int code, const char *msg) {
 #define SWIG_ConvertMember(obj, ptr, sz, ty)            SWIG_Matlab_ConvertPacked(obj, ptr, sz, ty)
 #define SWIG_NewMemberObj(ptr, sz, type)                SWIG_Matlab_NewPackedObj(ptr, sz, type)
 
-#define SWIG_GetModule(clientdata) SWIG_Matlab_GetModule(clientdata)
-#define SWIG_SetModule(clientdata, pointer) SWIG_Matlab_SetModule(clientdata,pointer);
+#define SWIG_GetModule(clientdata)                      SWIG_Matlab_GetModule(clientdata)
+#define SWIG_SetModule(clientdata, pointer)             SWIG_Matlab_SetModule(pointer);
 #define SWIG_MODULE_CLIENTDATA_TYPE void*
 
 #define Matlab_Error_Occurred() 0
 #define SWIG_Matlab_AddErrorMsg(msg) {;}
 
 SWIGRUNTIME swig_module_info *SWIG_Matlab_GetModule(void *clientdata);
-SWIGRUNTIME void SWIG_Matlab_SetModule(void *clientdata, swig_module_info *pointer);
+SWIGRUNTIME void SWIG_Matlab_SetModule(swig_module_info *pointer);
 
 /* For backward compatibility only */
 #define SWIG_POINTER_EXCEPTION  0
 #define SWIG_arg_fail(arg)      0
 
-/* Runtime API implementation */
+/* Pointer to C/C++ object, including type information and reference counters */
+typedef struct SwigPtr {
+  void *ptr;
+  swig_type_info *type;
+  int own;
+  void *self;
+  struct SwigPtr* next;
+} SwigPtr;
+static swig_module_info *saved_swig_module = 0;
 
-SWIGRUNTIME mxArray* SWIG_Matlab_NewPointerObj(void *ptr, swig_type_info *type, int flags) {
-  mxArray* pm_command = mxCreateString("_swigCreate");
-  mxArray* pm;
-#if 0
-  const char* classname = type->name+3;   /* FIXME: Hack to dereferece pointer */
-  char matlab_classname[1024];
-#if defined(_MSC_VER) || defined(__BORLANDC__) || defined(_WATCOM)
-  _snprintf(matlab_classname,sizeof(matlab_classname)-1,"%s.%s",SWIG_pkg_name,classname);
-#else
-  snprintf(matlab_classname,sizeof(matlab_classname),"%s.%s",SWIG_pkg_name,classname);
-#endif
+/* Add new pointer object to the memory allocator
+   Returns the location of the new element by reference and a return flag by value.
+ */
+int SWIG_Matlab_NewPointer(SwigPtr** swig_ptr, void *ptr, swig_type_info *type, int own) {
+  /* Check input arguments */
+  if (!swig_ptr || !type) return 1;
 
-#else
-  const char * matlab_classname;
-  if (type->clientdata)
-        matlab_classname = (const char *)type->clientdata;
-  else {
-       /* TODO do we really want this? it's a fall-back for non-package types (e.g pointer-to-float)
-          However, it will fail anyway because the mexCallMATLABWithTrap call will fail 
-          (as there'd be no package.float matlab-type)
-       */
-       matlab_classname = type->name+3;    /* FIXME: Hack to dereference pointer */
-       mexWarnMsgIdAndTxt("SWIG:NewPointerObj","NewPointerObj problem. clientdata NULL. guessed %s", matlab_classname);
-  }       
-#endif
+  /* Allocate memory */
+  SwigPtr *obj=(SwigPtr *)malloc(sizeof(SwigPtr));
+  if (!obj) return 1;
 
-  mxArray* ex = mexCallMATLABWithTrap(1,&pm,1,&pm_command,matlab_classname);
-
-  /* Hack hack */
-  if(ex){
-    /* the above failed, so let's just create a SwigRef */
-    mxDestroyArray(ex);
-    mexWarnMsgIdAndTxt("SWIG:NewPointerObj","NewPointerObj problem. creating SwigRef as opposed to %s", matlab_classname);
-    ex = mexCallMATLABWithTrap(1,&pm,0,0,"SwigRef");
-  }
-
-  if(ex) mexErrMsgIdAndTxt("SWIG:NewPointerObj","mexCallMATLABWithTrap failed for %s",type->name);
-  mxDestroyArray(pm_command);
-
-  mxArray* pm_type = mxCreateString(type->name);
-  mxSetProperty(pm,0,"swigType",pm_type);
-  mxDestroyArray(pm_type);
-
-  mxArray *pm_ptr = mxCreateNumericMatrix(1,1,mxUINT64_CLASS, mxREAL);
-  *(uint64_T *)mxGetData(pm_ptr) = (uint64_T)ptr;
-  if(!pm_ptr) mexErrMsgIdAndTxt("SWIG:NewPointerObj","mxCreateNumericMatrix failed");
-  mxSetProperty(pm,0,"swigCPtr",pm_ptr);
-  mxDestroyArray(pm_ptr);
-
-  bool own = (flags & SWIG_POINTER_OWN) ? SWIG_POINTER_OWN : 0;
-  mxArray* pm_own = mxCreateLogicalScalar(own);  
-  if(!pm_own) mexErrMsgIdAndTxt("SWIG:NewPointerObj","mxCreateLogicalScalar failed");
-  mxSetProperty(pm,0,"swigOwn",pm_own);
-  mxDestroyArray(pm_own);
-
-  return pm;
+  /* Initialize object */
+  obj->ptr = ptr;
+  obj->type = type;
+  obj->own = own;
+  obj->self = obj;
+  obj->next = 0;
+  
+  /* Return memory reference and successful return */
+  *swig_ptr = obj;
+  return 0;
 }
 
-SWIGRUNTIME int SWIG_Matlab_ConvertPtrAndOwn(mxArray* pm, void **ptr, swig_type_info *type, int flags, int *own) {
-  /* Return value */
-  int ret = SWIG_OK;
+/* Free pointer object
+   Returns a void* with the object to be freed (if any)
+ */
+void* SWIG_Matlab_DeletePointer(SwigPtr* p) {
+  /* Quick return if null pointer? */
+  if (p==0) return 0;
 
-  /* Get pointer, represented as a uint64_T scalar */
-  mxArray *pm_ptr = mxGetProperty(pm,0,"swigCPtr");
-  if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 || mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)){
-    ret = SWIG_ERROR;
-  } else {
-    if(ptr) *ptr = (void*)(*(uint64_T*)mxGetData(pm_ptr));
-  }
-  if(pm_ptr) mxDestroyArray(pm_ptr);
-  if (ret == SWIG_ERROR)
-    return ret;
-
-  /* Get ownership marker */
-  mxArray *pm_own = mxGetProperty(pm,0,"swigOwn");
-  if(!pm_own || !mxIsLogicalScalar(pm_own)){
-    ret = SWIG_ERROR;
-  } else {
-    if(own) *own = mxIsLogicalScalarTrue(pm_own);
-  }
-  if(pm_own) mxDestroyArray(pm_own);
-  if (ret == SWIG_ERROR)
-    return ret;
-
-  /* Set ownership marker to false? */
-  if(flags & SWIG_POINTER_DISOWN){
-    mxArray* pm_own = mxCreateLogicalScalar(false);
-    mxSetProperty(pm,0,"swigOwn",pm_own);
-    mxDestroyArray(pm_own);
-  }
-
-  /* Get type */
-  mxArray *pm_type = mxGetProperty(pm,0,"swigType");
-  char type_str[1024];
-  if(!pm_type || !mxIsChar(pm_type)){
-    ret = SWIG_ERROR;
-  } else if (mxGetString(pm_type, type_str, 1024)) {
-      ret = SWIG_ERROR;
-  }
-  if(pm_type) mxDestroyArray(pm_type);
-  if (ret == SWIG_ERROR)
-    return ret;
-
-  if (strcmp(type_str, type->name)==0) {
-      /* no type cast needed */
-      return SWIG_OK;
-  }
-  swig_cast_info *tc = SWIG_TypeCheck(type_str,type);
-  if (!tc) {
-    /* type doesn't match */
-    return SWIG_ERROR;
-  }
-  /* do type-cast (but only if non-zero ptr, otherwise it's trivial) */
-  if (ptr) {
-    int newmemory = 0;
-    *ptr = SWIG_TypeCast(tc,*ptr,&newmemory);
-    if (newmemory == SWIG_CAST_NEW_MEMORY) {
-       if (own)
-         *own = *own | SWIG_CAST_NEW_MEMORY;
-        else {
-         /* badly formed typemap which will lead to a memory leak - it must set and use own to delete *ptr */
-         mexErrMsgIdAndTxt("SWIG:ConvertPointerObj","SWIG error in converting pointer for type %s. Bad typemap?",type->name);
-         ret=SWIG_ERROR;
-        }
-    } 
-  }
-
+  /* Clear and free */
+  void* ret = p->own ? p->ptr : 0;
+  p->ptr=0;
+  p->type=0;
+  p->own=0;
+  p->self=0;
+  p->next=0;
+  free(p);
   return ret;
 }
 
-SWIGRUNTIME swig_module_info *SWIG_Matlab_GetModule(void *clientdata) {
-  swig_module_info *pointer = 0;
-  return pointer;
+/* This should probably be moved somewhere else */
+#ifdef __cplusplus
+extern "C"
+#endif /* cplusplus */
+void SWIG_Matlab_ExitFcn(void) {
+  /* Unused at the moment */
 }
 
-SWIGRUNTIME void SWIG_Matlab_SetModule(void *clientdata, swig_module_info *pointer) {
+/* Runtime API implementation */
+SWIGRUNTIME mxArray* SWIG_Matlab_NewPointerObj(void *ptr, swig_type_info *type, int flags) {
+  /* Ownership? */
+  int own = (flags & SWIG_POINTER_OWN) ? SWIG_POINTER_OWN : 0;
+
+  /* Allocate a pointer object */  
+  SwigPtr* swig_ptr;
+  if (SWIG_Matlab_NewPointer(&swig_ptr, ptr, type, own)) {
+    mexErrMsgIdAndTxt("SWIG:NewPointerObj","Cannot allocate pointer");
+  }
+
+  /* Create a SwigRef instance */
+  mxArray* pm = 0;
+  mxArray* ex = mexCallMATLABWithTrap(1, &pm, 0, 0, "SwigRef");
+  if(ex) mexErrMsgIdAndTxt("SWIG:NewPointerObj", "Cannot create SwigRef instance");
+
+  /* Set pointer property */
+  mxArray *pm_ptr = mxCreateNumericMatrix(1, 1, mxUINT64_CLASS, mxREAL);
+  *(uint64_T *)mxGetData(pm_ptr) = (uint64_T)swig_ptr;
+  if(!pm_ptr) mexErrMsgIdAndTxt("SWIG:NewPointerObj", "mxCreateNumericMatrix failed");
+  mxSetProperty(pm, 0, "swigPtr", pm_ptr);
+  mxDestroyArray(pm_ptr);
+
+  /* Create a proxy class of the desired type */
+  if (type->clientdata) {
+    const char* matlab_classname = (const char *)type->clientdata;
+    mxArray* pm_test = 0;
+    ex = mexCallMATLABWithTrap(1, &pm_test, 1, &pm, matlab_classname);
+    if (ex) {
+      mexWarnMsgIdAndTxt("SWIG:NewPointerObj",
+                         "NewPointerObj problem. creating SwigRef as opposed to %s", matlab_classname);
+      mxDestroyArray(ex);
+    } else {
+      mxDestroyArray(pm);
+      pm = pm_test;
+    }
+  }
+  
+  return pm;
+}
+
+SWIGRUNTIME int SWIG_Matlab_isOwned(mxArray* pm) {
+/* Get index, represented as a uint64_T scalar */
+  mxArray *pm_ptr = mxGetProperty(pm, 0, "swigPtr");
+  if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 ||
+     mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)) {
+    if(pm_ptr) mxDestroyArray(pm_ptr);
+    return SWIG_ERROR;
+  }
+  SwigPtr* p = (SwigPtr*)(*(uint64_T*)mxGetData(pm_ptr));
+  mxDestroyArray(pm_ptr);
+
+  return p ? p->own : 0;
+}
+
+SWIGRUNTIME SwigPtr* SWIG_Matlab_getSwigPtr(mxArray* pm) {
+/* Get index, represented as a uint64_T scalar */
+  mxArray *pm_ptr = mxGetProperty(pm, 0, "swigPtr");
+  if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 ||
+     mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)) {
+    if(pm_ptr) mxDestroyArray(pm_ptr);
+    return 0;
+  }
+  SwigPtr* p = (SwigPtr*)(*(uint64_T*)mxGetData(pm_ptr));
+  mxDestroyArray(pm_ptr);
+
+  /* Consistency check */
+  if (p->self != p) return 0;
+
+  /* Get pointer object */
+  return p;
+}
+
+SWIGRUNTIME int SWIG_Matlab_ConvertPtrAndOwn(mxArray* pm, void **ptr, swig_type_info *type, int flags, int *own) {
+  /* Get index, represented as a uint64_T scalar */
+  mxArray *pm_ptr = mxGetProperty(pm, 0, "swigPtr");
+  if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 ||
+     mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)){
+    if(pm_ptr) mxDestroyArray(pm_ptr);
+    return SWIG_ERROR;
+  }
+  SwigPtr* swig_ptr = (SwigPtr*)(*(uint64_T*)mxGetData(pm_ptr));
+  mxDestroyArray(pm_ptr);
+
+  /* Get pointer object */
+  if (!swig_ptr) return SWIG_ERROR;
+
+  swig_cast_info *tc;
+  bool same_type = false;
+  SwigPtr* p=swig_ptr;
+  while (p) {
+    /* Loop over types */
+    swig_type_info *p_type = p->type;
+
+    /* No type cast needed */
+    if (p_type==type || !type) {
+      same_type = true;
+      break;
+    }
+
+    /* Check if type conversion is possible */
+    tc = SWIG_TypeCheck(p_type->name, type);
+    if (tc) break;
+
+    /* Check next type */
+    p = p->next;
+  }
+
+  /* Conversion not possible */
+  if (!same_type && !tc) return SWIG_ERROR;
+
+  /* Get data */
+  if (ptr) *ptr = p->ptr;
+  if (own) *own = p->own;
+    
+  /* Set ownership marker to false? */
+  if(flags & SWIG_POINTER_DISOWN){
+    SWIG_Matlab_DeletePointer(swig_ptr);
+  }
+
+  /* No type cast needed */
+  if (same_type || !ptr) {
+    return SWIG_OK;
+  }
+
+  /* Do type-cast */
+  int newmemory = 0;
+  *ptr = SWIG_TypeCast(tc, *ptr, &newmemory);
+  if (newmemory == SWIG_CAST_NEW_MEMORY) {
+    if (own) {
+      *own = *own | SWIG_CAST_NEW_MEMORY;
+    } else {
+      /* badly formed typemap which will lead to a memory leak - it must set and use own to delete *ptr */
+      mexErrMsgIdAndTxt("SWIG:ConvertPointerObj","SWIG error in converting pointer for type %s. Bad typemap?",type->name);
+      return SWIG_ERROR;
+    }
+  }
+  return SWIG_OK;
+}
+
+SWIGRUNTIME swig_module_info *SWIG_Matlab_GetModule(void *SWIGUNUSEDPARM(clientdata)) {
+  if (!saved_swig_module) {
+    /* First call for this module, fetch pointer from MATLAB */
+    mxArray* mem = 0;
+    int flag = mexCallMATLAB(1, &mem, 0, 0, "SwigMem");
+    if (flag || !mem) mexErrMsgIdAndTxt("SWIG:GetModule", "Cannot call SwigMem");
+    /* On first call, mem is an empty matrix */
+    if (mxGetNumberOfElements(mem)!= 0) {
+      if (!mxIsStruct(mem)) {
+        mexErrMsgIdAndTxt("SWIG:GetModule", "Corrupted memory");
+      }
+      mxArray *module = mxGetField(mem, 0,
+        "swig_runtime_data_type_pointer" SWIG_RUNTIME_VERSION SWIG_TYPE_TABLE_NAME);
+      if (module && mxGetNumberOfElements(module) == 1 && mxGetClassID(module) == mxUINT64_CLASS && !mxIsComplex(module)) {
+        /* Cast memory as a pointer */
+        saved_swig_module = (swig_module_info*)(*(uint64_T*)mxGetData(module));
+      }
+    }
+    mxDestroyArray(mem);
+  }
+  return saved_swig_module;
+}
+
+SWIGRUNTIME void SWIG_Matlab_SetModule(swig_module_info *pointer) {
+  mxArray* mem = 0;
+  const char *fields[1] = {"swig_runtime_data_type_pointer" SWIG_RUNTIME_VERSION SWIG_TYPE_TABLE_NAME};
+  int flag = mexCallMATLAB(1, &mem, 0, 0, "SwigMem");
+  if (flag || !mem) mexErrMsgIdAndTxt("SWIG:SetModule", "Cannot call SwigMem");
+  /* Under normal circumstances, swigMem is an empty matrix */
+  /* but is not required to be for a valid call to SWIG_Matlab_SetModule() */
+  if (mxGetNumberOfElements(mem) == 0) {
+    mxDestroyArray(mem);
+    mem = mxCreateStructMatrix(1,1,1,fields);
+    if(!mem) mexErrMsgIdAndTxt("SWIG:SetModule","mxCreateStructMatrix failed");
+    mxArray *module = mxCreateNumericMatrix(1, 1, mxUINT64_CLASS, mxREAL);
+    if(!module) mexErrMsgIdAndTxt("SWIG:SetModule","mxCreateNumericMatrix failed");
+    *(uint64_T *)mxGetData(module) = (uint64_T)pointer;
+    mxSetField(mem, 0, fields[0], module);
+  } else {
+    int nfields = 0;
+    int fieldNum = 0;
+    /* Add to existing mem if not the same */
+    if (!mxIsStruct(mem)) {
+      mexErrMsgIdAndTxt("SWIG:SetModule", "Corrupted memory");
+    }
+    nfields = mxGetNumberOfFields(mem);
+    /* Check if same type table */
+    for (int ii=0; ii<nfields; ++ii){
+      if(strcmp(mxGetFieldNameByNumber(mem, ii), fields[0]) == 0) {
+        mxDestroyArray(mem);
+        return;
+      }
+    }
+    fieldNum = mxAddField(mem, fields[0]);
+    if (fieldNum < 0) mexErrMsgIdAndTxt("SWIG:SetModule", "Error adding field to SwigMem");
+    mxArray *module = mxCreateNumericMatrix(1, 1, mxUINT64_CLASS, mxREAL);
+    if(!module) mexErrMsgIdAndTxt("SWIG:SetModule","mxCreateNumericMatrix failed");
+    *(uint64_T *)mxGetData(module) = (uint64_T)pointer;
+    mxSetFieldByNumber(mem, 0, fieldNum, module);
+  }
+  /* Set variable in SwigMem */
+  flag = mexCallMATLAB(0, 0, 1, &mem, "SwigMem");
+  mxDestroyArray(mem);
+  if (flag) {
+    mexErrMsgIdAndTxt("SWIG:SetModule", "Could not set variable in SwigMem.\n");
+  }
+  saved_swig_module = pointer;
 }
 
 /* HACK HACK */
 #define SWIG_Matlab_SetConstant(dummy1,dummy2,pm) (pm)
+
+#ifdef __cplusplus
+#include <streambuf>
+#include <iostream>
+namespace swig {
+  // Stream buffer to allow redirecting output to MATLAB
+  class SWIG_Matlab_streambuf : public std::streambuf {
+  public:
+    SWIG_Matlab_streambuf() {}
+  protected:
+    virtual int_type overflow(int_type ch) {
+      if(ch != traits_type::eof()) {
+        mexPrintf("%c", static_cast<char>(ch));
+      }
+      return ch;
+    }
+    virtual std::streamsize xsputn(const char* s, std::streamsize num) {
+      // Pass straight to mexPrintf without buffering
+      mexPrintf("%.*s", static_cast<int>(num), s);
+      return num;
+    }
+  };
+
+  // Instantiation
+  static SWIG_Matlab_streambuf SWIG_Matlab_buf;
+} // namespace swig
+#endif /* cplusplus */

@@ -149,8 +149,9 @@ Examples/test-suite/javascript/*/
 *.mex*
 # module directories
 [+]*/
-# matlab swig class
+# matlab common
 SwigRef.m
+SwigMem.m
 
 # Octave
 swigexample*.oct

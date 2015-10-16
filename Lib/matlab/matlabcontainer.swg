@@ -46,14 +46,14 @@ namespace swig {
   
   template <> 
   struct traits_check<mxArray*, value_category> {
-    static bool check(const mxArray*) {
+    static bool check(mxArray*) {
       return true;
     }
   };
   
   template <>  struct traits_asval<mxArray* > {   
     typedef mxArray* value_type;
-    static int asval(const mxArray* obj, value_type *val) {
+    static int asval(mxArray* obj, value_type *val) {
       if (val) *val = obj;
       return SWIG_OK;
     }
@@ -72,7 +72,7 @@ KT do we need this?
   struct less <mxArray*>: public binary_function<mxArray*, mxArray*, bool>
   {
     bool
-    operator()(const mxArray* v, const mxArray* w) const
+    operator()(mxArray* v, mxArray* w) const
     { 
       mxArray* res = do_binary_op(mxArray*::op_le,v,w);
       return res.is_true();
@@ -510,13 +510,13 @@ namespace swig
       return x;
     }
 
-    // KT TODO need to get this in matlab conventions
-    value_type paren(difference_type i) throw (std::out_of_range) {
+    // Cell access in Matlab conventions
+    value_type brace(difference_type i) throw (std::out_of_range) {
       return *(swig::cgetpos(self, i));
     }
 
-    // KT TODO need to get this in matlab conventions
-    void paren_asgn(difference_type i, value_type x) throw (std::out_of_range) {
+    // Cell assign in Matlab conventions
+    void setbrace(value_type x, difference_type i) throw (std::out_of_range) {
       *(swig::getpos(self,i)) = x;
     }
 
@@ -562,39 +562,33 @@ namespace swig {
   struct traits_asptr_stdseq {
     typedef Seq sequence;
     typedef T value_type;
+    typedef typename sequence::iterator iterator;
 
-    static int asptr(const mxArray* obj, sequence **seq) {
-%#if 1
-    // TODO
-    SWIG_Error(SWIG_SystemError, "asptr for seq");
-    return SWIG_ERROR;
-%#else
-      if (!obj.is_defined() || Swig::swig_value_deref(obj)) {
+    static int asptr(mxArray* obj, sequence **seq) {
+      if (obj && mxGetClassID(obj)==mxCELL_CLASS &&
+              mxGetNumberOfDimensions(obj)==2 &&
+              mxGetM(obj)==1 && mxGetN(obj)>0 ) {
+        // Convert to cell array.
+        if (seq) {
+          *seq = new sequence(mxGetN(obj));
+          if(*seq) {
+            int i = 0;
+            for (iterator it = (*seq)->begin();
+                 it != (*seq)->end(); ++it, ++i) {
+              *it = swig::as<value_type>(mxGetCell(obj, i));
+            }
+            return SWIG_NEWOBJ;
+          }
+        }
+      } else {
 	sequence *p;
-	if (SWIG_ConvertPtr(obj,(void**)&p,
-			    swig::type_info<sequence>(),0) == SWIG_OK) {
+        if (SWIG_ConvertPtr(obj,(void**)&p,
+                            swig::type_info<sequence>(),0) == SWIG_OK) {
 	  if (seq) *seq = p;
 	  return SWIG_OLDOBJ;
 	}
-      } else if (mxGetClassID(obj)==mxCELL_CLASS) {
-	try {
-	  MatlabSequence_Cont<value_type> matlabseq(obj);
-	  if (seq) {
-	    sequence *pseq = new sequence();
-	    assign(matlabseq, pseq);
-	    *seq = pseq;
-	    return SWIG_NEWOBJ;
-	  } else {
-	    return matlabseq.check() ? SWIG_OK : SWIG_ERROR;
-	  }
-	} catch (std::exception& e) {
-	  if (seq&&!error_state)
-	    SWIG_Error(SWIG_TypeError,e.what());
-	  return SWIG_ERROR;
-	}
       }
       return SWIG_ERROR;
-%#endif
     }
   };
 
@@ -612,25 +606,21 @@ namespace swig {
 	return SWIG_NewPointerObj(new sequence(seq), desc, SWIG_POINTER_OWN);
       }
 #endif
-%#if 1
-      SWIG_Error(SWIG_SystemError, "from for seq");
-      return 0;
-%#else
+
       size_type size = seq.size();
       if (size <= (size_type)INT_MAX) {
-	Cell c(size,1);
+        mxArray* c = mxCreateCellMatrix(1,size);
 	int i = 0;
 	for (const_iterator it = seq.begin();
 	     it != seq.end(); ++it, ++i) {
-	  c(i) = swig::from<value_type>(*it);
+	  mxSetCell(c, i, swig::from<value_type>(*it));
 	}
 	return c;
       } else {
 	SWIG_Error(SWIG_RuntimeError, "swig overflow error: sequence size not valid in matlab");
-	return 0; // KT TODO mxArray();
+	return 0;
       }
-      return 0; // KT TODO mxArray();
-%#endif
+      return 0;
     }
   };
 }

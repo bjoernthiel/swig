@@ -3,7 +3,8 @@
 #######################################################################
 
 LANGUAGE     = matlab
-MATLAB        = @MATLAB@ -nodisplay -nosplash -nojvm
+MATLAB       = @MATLAB@
+MATLABOPTS   = -nodisplay -nosplash -nojvm
 SCRIPTSUFFIX = _runme
 
 srcdir       = @srcdir@
@@ -95,7 +96,7 @@ include $(srcdir)/../common.mk
 # Runs the testcase. A testcase is only run if
 # a file is found which has _runme.m appended after the testcase name.
 run_testcase = \
-	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX).m ]; then \
 	 RUNSCRIPT="\
 	  try; \
 	    $(SCRIPTPREFIX)$*$(SCRIPTSUFFIX); \
@@ -105,13 +106,15 @@ run_testcase = \
 	    exit(1); \
 	    end; \
 	  exit(0)" ; \
-	 env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH MATLABPATH=$(srcdir):$(SCRIPTDIR):$$MATLAB_PATH \
-	 $(RUNTOOL) $(MATLAB) -r "$$RUNSCRIPT"  $(RUNPIPE); \
+	 env LD_LIBRARY_PATH=".:$$LD_LIBRARY_PATH" MATLABPATH="$(srcdir):$(SCRIPTDIR):$$MATLAB_PATH" \
+	 $(RUNTOOL) "$(MATLAB)" $(MATLABOPTS) -r "$$RUNSCRIPT"  $(RUNPIPE); \
 	 if [ $$? -ne 0 ] ; then \
-	   echo "\n$* failed" $(RUNPIPE) ; \
+	   echo "   $* failed" $(RUNPIPE) ; \
 	 else \
-	   echo "\n$* passed" $(RUNPIPE) ; \
+	   echo "   $* passed" $(RUNPIPE) ; \
 	 fi \
+	else \
+	   echo "   $* build passed (no runme test present)" $(RUNPIPE) ; \
 	fi
 
 # Clean: remove the generated .m file
