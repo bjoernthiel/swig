@@ -27,6 +27,18 @@ if( MSVC )
 	set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D_CRT_SECURE_NO_WARNINGS" )
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_CRT_SECURE_NO_WARNINGS" )
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4800" ) # conversion to bool
+	# static runtime
+	foreach( language C CXX )
+		foreach( flag
+				CMAKE_${language}_FLAGS_DEBUG
+				CMAKE_${language}_FLAGS_RELEASE
+				CMAKE_${language}_FLAGS_RELWITHDEBINFO
+				CMAKE_${language}_FLAGS_MINSIZEREL )
+			if( ${flag} MATCHES "/MD" )
+				string( REGEX REPLACE "/MD" "/MT" ${flag} "${${flag}}" )
+			endif()
+		endforeach()
+	endforeach()
 endif()
 
 configure_file(
