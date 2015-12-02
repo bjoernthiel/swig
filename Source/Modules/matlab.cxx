@@ -1387,15 +1387,7 @@ int MATLAB::constantWrapper(Node *n) {
     return SWIG_NOWRAP;
   }
 
-  if (class_name) {
-    // Continue getter function
-    Printf(static_methods,"      persistent vInitialized;\n");
-    Printf(static_methods,"      if isempty(vInitialized)\n");
-    Printf(static_methods,"        vInitialized = %s(0,'swigConstant',%d,'%s');\n",mex_name,con_id,symname);
-    Printf(static_methods,"      end\n");
-    Printf(static_methods,"      v = vInitialized;\n");
-    Printf(static_methods,"    end\n");
-  } else {
+  if (!class_name) {
     // Create MATLAB proxy
     String* mfile = NewString("");
     Printf(mfile, "%s/%s.m", pkg_name_fullpath, symname);
@@ -2594,9 +2586,21 @@ int MATLAB::memberconstantHandler(Node *n) {
   // Name of variable
   String *symname = Getattr(n, "sym:name");
 
+  // Get name of wrapper
+  String *fullname = Swig_name_member(NSPACE_TODO, class_name, symname);
+  
   // Add getter function
   checkValidSymName(n);
-  Printf(static_methods,"    function v = %s()\n",symname);
+  Printf(static_methods,"    function v = %s()\n", symname);  
+  Printf(static_methods,"      persistent vInitialized;\n");
+  Printf(static_methods,"      if isempty(vInitialized)\n");
+  Printf(static_methods,"        vInitialized = %s(0, %d);\n", mex_name, con_id);
+  Printf(static_methods,"      end\n");
+  Printf(static_methods,"      v = vInitialized;\n");
+  Printf(static_methods,"    end\n");
+
+  // Tidy up
+  Delete(fullname);
 
   return flag;
 }
@@ -2962,7 +2966,6 @@ String *MATLAB::runtimeCode() {
 String *MATLAB::defaultExternalRuntimeFilename() {
   return NewString("swigmatlabrun.h");
 }
-
 
 
 
