@@ -37,15 +37,15 @@ SWIGRUNTIME const char* SWIG_ErrorType(int code) {
   return "SWIG:UnknownError";
 }
 
-SWIGRUNTIME bool SWIG_check_num_args(const char *func_name, int num_args, int max_args, int min_args, int varargs) {
+SWIGRUNTIME int SWIG_check_num_args(const char *func_name, int num_args, int max_args, int min_args, int varargs) {
   if (num_args > max_args && !varargs) {
     SWIG_Error(SWIG_RuntimeError, "function %s takes at most %i arguments", func_name, max_args);
   } else if (num_args < min_args) {
     SWIG_Error(SWIG_RuntimeError, "function %s requires at least %i arguments", func_name, min_args);
   } else {
-    return true;
+    return 1;
   }
-  return false;
+  return 0;
 }
 
 #define SWIG_fail                                       goto fail
@@ -107,7 +107,7 @@ int SWIG_Matlab_NewPointer(SwigPtr** swig_ptr, void *ptr, swig_type_info *type, 
   obj->own = own;
   obj->self = obj;
   obj->next = 0;
-  
+
   /* Return memory reference and successful return */
   *swig_ptr = obj;
   return 0;
@@ -139,50 +139,97 @@ void SWIG_Matlab_ExitFcn(void) {
   /* Unused at the moment */
 }
 
+SWIGRUNTIME int
+SWIG_Matlab_CallInterp(int nlhs, mxArray *plhs[], int nrhs,
+                       mxArray *prhs[], const char *functionName) {
+#ifdef HAVE_OCTAVE
+  return mexCallMATLAB(nlhs, plhs, nrhs, prhs, functionName);
+#else
+  mxArray* ex = mexCallMATLABWithTrap(nlhs, plhs, nrhs, prhs, functionName);
+  if (ex) {
+    mxDestroyArray(ex);
+    return 1;
+  } else {
+    return 0;
+  }
+#endif
+}
+
+SWIGRUNTIME mxArray*
+SWIG_Matlab_CallInterpEx(int nlhs, mxArray *plhs[], int nrhs,
+                       mxArray *prhs[], const char *functionName) {
+#ifdef HAVE_OCTAVE
+  int flag = mexCallMATLAB(nlhs, plhs, nrhs, prhs, functionName);
+  if (flag) {
+    mexErrMsgIdAndTxt("SWIG:CallInterpEx","Not implemented for Octave");
+  }
+  return 0;
+#else
+  return mexCallMATLABWithTrap(nlhs, plhs, nrhs, prhs, functionName);
+#endif
+}
+
+/* Convert a packed value value */
+SWIGRUNTIME int
+SWIG_Matlab_ConvertPacked(mxArray* SWIGUNUSEDPARM(pm), void* SWIGUNUSEDPARM(ptr), size_t SWIGUNUSEDPARM(sz), swig_type_info* SWIGUNUSEDPARM(ty)) {
+  mexErrMsgIdAndTxt("SWIG:ConvertPacked","Not implemented");
+  return SWIG_ERROR;
+}
+
 /* Runtime API implementation */
 SWIGRUNTIME mxArray* SWIG_Matlab_NewPointerObj(void *ptr, swig_type_info *type, int flags) {
   /* Ownership? */
   int own = (flags & SWIG_POINTER_OWN) ? SWIG_POINTER_OWN : 0;
 
-  /* Allocate a pointer object */  
-  SwigPtr* swig_ptr;
+  /* Allocate a pointer object */
+  SwigPtr* swig_ptr = 0;
   if (SWIG_Matlab_NewPointer(&swig_ptr, ptr, type, own)) {
     mexErrMsgIdAndTxt("SWIG:NewPointerObj","Cannot allocate pointer");
   }
 
   /* Create a SwigRef instance */
   mxArray* pm = 0;
-  mxArray* ex = mexCallMATLABWithTrap(1, &pm, 0, 0, "SwigRef");
-  if(ex) mexErrMsgIdAndTxt("SWIG:NewPointerObj", "Cannot create SwigRef instance");
+  int ex = SWIG_Matlab_CallInterp(1, &pm, 0, 0, "SwigRef");
+  if (ex) mexErrMsgIdAndTxt("SWIG:NewPointerObj", "Cannot create SwigRef instance");
 
   /* Set pointer property */
   mxArray *pm_ptr = mxCreateNumericMatrix(1, 1, mxUINT64_CLASS, mxREAL);
   *(uint64_T *)mxGetData(pm_ptr) = (uint64_T)swig_ptr;
   if(!pm_ptr) mexErrMsgIdAndTxt("SWIG:NewPointerObj", "mxCreateNumericMatrix failed");
-  mxSetProperty(pm, 0, "swigPtr", pm_ptr);
+
+  mxArray *rhs[2] = {pm, pm_ptr};
+  mexCallMATLAB(0, 0, 2, rhs, "SwigSet");
   mxDestroyArray(pm_ptr);
 
   /* Create a proxy class of the desired type */
   if (type->clientdata) {
     const char* matlab_classname = (const char *)type->clientdata;
     mxArray* pm_test = 0;
-    ex = mexCallMATLABWithTrap(1, &pm_test, 1, &pm, matlab_classname);
+    ex = SWIG_Matlab_CallInterp(1, &pm_test, 1, &pm, matlab_classname);
     if (ex) {
       mexWarnMsgIdAndTxt("SWIG:NewPointerObj",
                          "NewPointerObj problem. creating SwigRef as opposed to %s", matlab_classname);
-      mxDestroyArray(ex);
     } else {
       mxDestroyArray(pm);
       pm = pm_test;
     }
   }
-  
+
   return pm;
+}
+
+/* Create a new packed object */
+
+SWIGRUNTIMEINLINE mxArray*
+SWIG_Matlab_NewPackedObj(void* SWIGUNUSEDPARM(ptr), size_t SWIGUNUSEDPARM(sz), swig_type_info* SWIGUNUSEDPARM(type)) {
+  mexErrMsgIdAndTxt("SWIG:NewPackedOb","Not implemented");
+  return 0;
 }
 
 SWIGRUNTIME int SWIG_Matlab_isOwned(mxArray* pm) {
 /* Get index, represented as a uint64_T scalar */
-  mxArray *pm_ptr = mxGetProperty(pm, 0, "swigPtr");
+  mxArray *pm_ptr;
+  mexCallMATLAB(1, &pm_ptr, 1, &pm, "SwigGet");
   if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 ||
      mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)) {
     if(pm_ptr) mxDestroyArray(pm_ptr);
@@ -196,7 +243,8 @@ SWIGRUNTIME int SWIG_Matlab_isOwned(mxArray* pm) {
 
 SWIGRUNTIME SwigPtr* SWIG_Matlab_getSwigPtr(mxArray* pm) {
 /* Get index, represented as a uint64_T scalar */
-  mxArray *pm_ptr = mxGetProperty(pm, 0, "swigPtr");
+  mxArray *pm_ptr;
+  mexCallMATLAB(1, &pm_ptr, 1, &pm, "SwigGet");
   if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 ||
      mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)) {
     if(pm_ptr) mxDestroyArray(pm_ptr);
@@ -214,7 +262,8 @@ SWIGRUNTIME SwigPtr* SWIG_Matlab_getSwigPtr(mxArray* pm) {
 
 SWIGRUNTIME int SWIG_Matlab_ConvertPtrAndOwn(mxArray* pm, void **ptr, swig_type_info *type, int flags, int *own) {
   /* Get index, represented as a uint64_T scalar */
-  mxArray *pm_ptr = mxGetProperty(pm, 0, "swigPtr");
+  mxArray *pm_ptr;
+  mexCallMATLAB(1, &pm_ptr, 1, &pm, "SwigGet");
   if(!pm_ptr || mxGetNumberOfElements(pm_ptr) != 1 ||
      mxGetClassID(pm_ptr) != mxUINT64_CLASS || mxIsComplex(pm_ptr)){
     if(pm_ptr) mxDestroyArray(pm_ptr);
@@ -227,7 +276,7 @@ SWIGRUNTIME int SWIG_Matlab_ConvertPtrAndOwn(mxArray* pm, void **ptr, swig_type_
   if (!swig_ptr) return SWIG_ERROR;
 
   swig_cast_info *tc;
-  bool same_type = false;
+  int same_type = 0;
   SwigPtr* p=swig_ptr;
   while (p) {
     /* Loop over types */
@@ -235,7 +284,7 @@ SWIGRUNTIME int SWIG_Matlab_ConvertPtrAndOwn(mxArray* pm, void **ptr, swig_type_
 
     /* No type cast needed */
     if (p_type==type || !type) {
-      same_type = true;
+      same_type = 1;
       break;
     }
 
@@ -253,7 +302,7 @@ SWIGRUNTIME int SWIG_Matlab_ConvertPtrAndOwn(mxArray* pm, void **ptr, swig_type_
   /* Get data */
   if (ptr) *ptr = p->ptr;
   if (own) *own = p->own;
-    
+
   /* Set ownership marker to false? */
   if(flags & SWIG_POINTER_DISOWN){
     SWIG_Matlab_DeletePointer(swig_ptr);
@@ -326,7 +375,8 @@ SWIGRUNTIME void SWIG_Matlab_SetModule(swig_module_info *pointer) {
     }
     nfields = mxGetNumberOfFields(mem);
     /* Check if same type table */
-    for (int ii=0; ii<nfields; ++ii){
+    int ii;
+    for (ii=0; ii<nfields; ++ii){
       if(strcmp(mxGetFieldNameByNumber(mem, ii), fields[0]) == 0) {
         mxDestroyArray(mem);
         return;

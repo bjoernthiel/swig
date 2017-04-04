@@ -175,7 +175,7 @@ namespace Swig {
   class UnknownExceptionHandler {
   };
 
-  /* type mismatch in the return value from a python method call */
+  /* type mismatch in the return value from a matlab method call */
   class DirectorTypeMismatchException : public DirectorException {
   public:
     DirectorTypeMismatchException(const char *error, const char *msg)
@@ -195,7 +195,7 @@ namespace Swig {
     }
   };
 
-  /* any python exception that occurs during a director method call */
+  /* any matlab exception that occurs during a director method call */
   class DirectorMethodException : public DirectorException {
   public:
     DirectorMethodException(const char *msg = "")
@@ -223,7 +223,7 @@ namespace Swig {
 
 # define SWIG_GUARD(mutex)
 
- 
+
   /* director base class */
   class Director {
   private:
@@ -251,11 +251,10 @@ namespace Swig {
           mxArray* field = mxCreateString(fname.c_str());
           mxArray* empty = mxCreateDoubleMatrix(0, 0, mxREAL);
           mxArray* rhs[2] = {field, empty};
-          mxArray* error = mexCallMATLABWithTrap(0, 0, 2, rhs, "SwigStorage");
+          int error = SWIG_Matlab_CallInterp(0, 0, 2, rhs, "SwigStorage");
           mxDestroyArray(field);
           mxDestroyArray(empty);
           if (error) {
-            mxDestroyArray(error);
             mexErrMsgIdAndTxt("SWIG:Director:swig_decref", "Cannot call SwigStorage");
           }
         }
@@ -269,10 +268,9 @@ namespace Swig {
       std::string fname = fieldname();
       mxArray* field = mxCreateString(fname.c_str());
       mxArray* rhs[2] = {field, self};
-      mxArray* error = mexCallMATLABWithTrap(0, 0, 2, rhs, "SwigStorage");
+      int error = SWIG_Matlab_CallInterp(0, 0, 2, rhs, "SwigStorage");
       mxDestroyArray(field);
       if (error) {
-        mxDestroyArray(error);
         mexErrMsgIdAndTxt("SWIG:Director:Director", "Cannot call SwigStorage");
       }
     }
@@ -289,10 +287,9 @@ namespace Swig {
       std::string fname = fieldname();
       mxArray* field = mxCreateString(fname.c_str());
       mxArray* swig_self = 0;
-      mxArray* error = mexCallMATLABWithTrap(1, &swig_self, 1, &field, "SwigStorage");
+      int error = SWIG_Matlab_CallInterp(1, &swig_self, 1, &field, "SwigStorage");
       mxDestroyArray(field);
       if (error) {
-        mxDestroyArray(error);
         mexErrMsgIdAndTxt("SWIG:Director:Director", "Cannot call SwigStorage");
       }
       return swig_self;

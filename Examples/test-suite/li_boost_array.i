@@ -25,13 +25,15 @@ namespace boost {
   using std::array;
 }
 
+%ignore std::array::fill; // Some older versions of boost don't have this function
+
 %include <std_array.i>
 
 %template(ArrayInt6) std::array<int, 6>;
 
 %inline %{
 boost::array<int, 6> arrayOutVal() {
-  const char carray[] = { -2, -1, 0, 0, 1, 2 };
+  const signed char carray[] = { -2, -1, 0, 0, 1, 2 };
   boost::array<int, 6> myarray;
   for (size_t i=0; i<6; ++i) {
     myarray[i] = carray[i];

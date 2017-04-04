@@ -232,7 +232,7 @@ private:
 
   /* ------------------------------------------------------------
    * docstring()
-   *    Get the docstring text, stripping off {} if neccessary,
+   *    Get the docstring text, stripping off {} if necessary,
    *    and enclose in triple double quotes.  If autodoc is also
    *    set then it will build a combined docstring.
    * ------------------------------------------------------------ */
@@ -1011,6 +1011,8 @@ public:
 
   virtual int top(Node *n) {
 
+    String *mod_docstring = NULL;
+
     /**
      * See if any Ruby module options have been specified as options
      * to the %module directive.
@@ -1032,6 +1034,7 @@ public:
 	  multipleInheritance = true;
 	  director_multiple_inheritance = 1;
 	}
+	mod_docstring = Getattr(options, "docstring");
       }
     }
 
@@ -1146,6 +1149,15 @@ public:
 
     Printf(f_header, "#define SWIG_init    Init_%s\n", feature);
     Printf(f_header, "#define SWIG_name    \"%s\"\n\n", module);
+
+    if (mod_docstring) {
+      if (Len(mod_docstring)) {
+	Printf(f_header, "/*\n  Document-module: %s\n\n%s\n*/\n", module, mod_docstring);
+      }
+      Delete(mod_docstring);
+      mod_docstring = NULL;
+    }
+
     Printf(f_header, "static VALUE %s;\n", modvar);
 
     /* Start generating the initialization function */
@@ -1534,7 +1546,8 @@ public:
     /* Finish argument marshalling */
     Printf(kwargs, " NULL }");
     if (allow_kwargs) {
-      Printv(f->locals, tab4, "const char *kwnames[] = ", kwargs, ";\n", NIL);
+// kwarg support not implemented
+//      Printv(f->locals, tab4, "const char *kwnames[] = ", kwargs, ";\n", NIL);
     }
 
     /* Trailing varargs */
@@ -1739,11 +1752,13 @@ public:
 
     /* Now write the wrapper function itself */
     if (current == CONSTRUCTOR_ALLOCATE) {
+      Printv(f->def, "SWIGINTERN VALUE\n", NIL);
       Printf(f->def, "#ifdef HAVE_RB_DEFINE_ALLOC_FUNC\n");
-      Printv(f->def, "SWIGINTERN VALUE\n", wname, "(VALUE self) {", NIL);
+      Printv(f->def, wname, "(VALUE self)\n", NIL);
       Printf(f->def, "#else\n");
-      Printv(f->def, "SWIGINTERN VALUE\n", wname, "(int argc, VALUE *argv, VALUE self) {", NIL);
+      Printv(f->def, wname, "(int argc, VALUE *argv, VALUE self)\n", NIL);
       Printf(f->def, "#endif\n");
+      Printv(f->def, "{\n", NIL);
     } else if (current == CONSTRUCTOR_INITIALIZE) {
       Printv(f->def, "SWIGINTERN VALUE\n", wname, "(int argc, VALUE *argv, VALUE self) {", NIL);
       if (!varargs) {
@@ -2108,13 +2123,11 @@ public:
     // Generate prototype list, go to first node
     Node *sibl = n;
 
-    String* type = SwigType_str(Getattr(sibl,"type"),NULL);
-
     while (Getattr(sibl, "sym:previousSibling"))
       sibl = Getattr(sibl, "sym:previousSibling");	// go all the way up
 
     // Constructors will be treated specially
-    const bool isCtor = Cmp(Getattr(sibl,"feature:new"), "1") == 0;
+    const bool isCtor = (!Cmp(Getattr(sibl, "nodeType"), "constructor"));
     const bool isMethod = ( Cmp(Getattr(sibl, "ismember"), "1") == 0 &&
 			    (!isCtor) );
 
@@ -2136,7 +2149,11 @@ public:
     String *protoTypes = NewString("");
     do {
       Append( protoTypes, "\n\"    ");
-      if ( !isCtor )  Printv( protoTypes, type, " ", NIL );
+      if (!isCtor) {
+	SwigType *type = SwigType_str(Getattr(sibl, "type"), NULL);
+	Printv(protoTypes, type, " ", NIL);
+	Delete(type);
+      }
       Printv(protoTypes, methodName, NIL );
       Parm* p = Getattr(sibl, "wrap:parms");
       if (p && (current == MEMBER_FUNC || current == MEMBER_VAR || 
@@ -2157,7 +2174,6 @@ public:
     Append(f->code, "\nreturn Qnil;\n");
 
     Delete(methodName);
-    Delete(type);
     Delete(protoTypes);
 
     Printv(f->code, "}\n", NIL);
@@ -2471,7 +2487,7 @@ public:
 	    String *proxyclassname = SwigType_str(Getattr(n, "classtypeobj"), 0);
 	    String *baseclassname = SwigType_str(Getattr(base.item, "name"), 0);
 	    Swig_warning(WARN_RUBY_MULTIPLE_INHERITANCE, Getfile(n), Getline(n),
-			 "Warning for %s proxy: Base %s ignored. Multiple inheritance is not supported in Ruby.\n", proxyclassname, baseclassname);
+			 "Warning for %s, base %s ignored. Multiple inheritance is not supported in Ruby.\n", proxyclassname, baseclassname);
 	    base = Next(base);
 	  }
 	}
@@ -3458,6 +3474,7 @@ public:
    *--------------------------------------------------------------------*/
 
   bool kwargsSupport() const {
+    // kwargs support isn't actually implemented, but changing to return false may break something now as it turns on compactdefaultargs
     return true;
   }
 };				/* class RUBY */

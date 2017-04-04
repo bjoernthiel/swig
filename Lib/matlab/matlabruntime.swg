@@ -1,13 +1,19 @@
 %insert(runtime) %{
+/* Workaround, Octave's mex.h lacks uint64_t */
+#include <stdint.h>
+/* MATLAB's C-API */
 #ifdef _MSC_VER
 #define DLL_EXPORT_SYM __declspec(dllexport)
 #else
 #define DLL_EXPORT_SYM
 #endif
 #include <mex.h>
-#include <math.h> /* need this for floor() */
-#include <string.h> /* need this for strcmp() */
-#include <stdarg.h> /* need this for SWIG_Error below */
+/* MISC C libraries */
+#include <math.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <limits.h>
 %}
 
 %insert(runtime) "swigrun.swg";

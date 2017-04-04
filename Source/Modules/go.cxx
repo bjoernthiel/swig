@@ -1362,6 +1362,10 @@ private:
     goargout(info->parms);
 
     if (SwigType_type(info->result) != T_VOID) {
+
+      Swig_save("cgoGoWrapper", info->n, "type", "tmap:goout", NULL);
+      Setattr(info->n, "type", info->result);
+
       String *goout = goTypemapLookup("goout", info->n, "swig_r");
       if (goout == NULL) {
 	Printv(f_go_wrappers, "\treturn swig_r\n", NULL);
@@ -1374,6 +1378,8 @@ private:
 	Printv(f_go_wrappers, goout, "\n", NULL);
 	Printv(f_go_wrappers, "\treturn swig_r_1\n", NULL);
       }
+
+      Swig_restore(info->n);
     }
 
     Printv(f_go_wrappers, "}\n\n", NULL);
@@ -1618,7 +1624,12 @@ private:
       receiver = NULL;
     }
 
+    Swig_save("cgoGoWrapper", n, "type", "tmap:goout", NULL);
+    Setattr(n, "type", result);
+
     String *goout = goTypemapLookup("goout", n, "swig_r");
+
+    Swig_restore(n);
 
     bool add_to_interface = (interfaces && !is_constructor && !is_destructor && !is_static && !overname && checkFunctionVisibility(n, NULL));
 
@@ -2112,6 +2123,7 @@ private:
     emit_attach_parmmaps(parms, f);
     int parm_count = emit_num_arguments(parms);
     int required_count = emit_num_required(parms);
+    bool needs_swigargs = false;
 
     emit_return_variable(n, result, f);
 
@@ -2125,6 +2137,7 @@ private:
     String *swigargs = NewString("\tstruct swigargs {\n");
 
     if (parm_count > required_count) {
+      needs_swigargs = true;
       Printv(swigargs, "\t\tintgo _swig_optargc;\n", NULL);
     }
 
@@ -2136,6 +2149,7 @@ private:
       SwigType *pt = Getattr(p, "type");
       String *ct = gcCTypeForGoValue(p, pt, ln);
       Printv(swigargs, "\t\t\t", ct, ";\n", NULL);
+      needs_swigargs = true;
       Delete(ct);
 
       String *gn = NewStringf("_swig_go_%d", i);
@@ -2152,6 +2166,7 @@ private:
       String *ct = gcCTypeForGoValue(n, result, ln);
       Delete(ln);
       Printv(swigargs, "\t\t", ct, ";\n", NULL);
+      needs_swigargs = true;
       Delete(ct);
 
       ln = NewString("_swig_go_result");
@@ -2160,7 +2175,7 @@ private:
       Delete(ct);
       Delete(ln);
     }
-    Printv(swigargs, "\t} *swig_a = (struct swigargs *) swig_v;\n", NULL);
+    Printv(swigargs, "\t} SWIGSTRUCTPACKED *swig_a = (struct swigargs *) swig_v;\n", NULL);
 
     // Copy the input arguments out of the structure into the Go local
     // variables.
@@ -2208,7 +2223,10 @@ private:
 
     cleanupFunction(n, f, parms);
 
-    Printv(f->locals, swigargs, NULL);
+    if (needs_swigargs)
+    {
+      Printv(f->locals, swigargs, NULL);
+    }
 
     Printv(f->code, "}\n", NULL);
 
@@ -2705,6 +2723,9 @@ private:
    * ---------------------------------------------------------------------- */
 
   virtual int enumDeclaration(Node *n) {
+    if (getCurrentClass() && (cplus_mode != PUBLIC))
+      return SWIG_NOWRAP;
+
     String *name = goEnumName(n);
     if (Strcmp(name, "int") != 0) {
       if (!ImportMode || !imported_package) {
@@ -2785,6 +2806,7 @@ private:
     } else if (SwigType_type(type) == T_CHAR) {
       quote = '\'';
     } else if (SwigType_type(type) == T_STRING) {
+      Printv(get, "(char *)", NULL);
       quote = '"';
     } else {
       quote = '\0';
@@ -3982,7 +4004,7 @@ private:
     Printv(f_c_directors, director_sig, NULL);
 
     if (!gccgo_flag) {
-      Printv(f_c_directors, "  struct { intgo p; } a;\n", NULL);
+      Printv(f_c_directors, "  struct { intgo p; } SWIGSTRUCTPACKED a;\n", NULL);
       Printv(f_c_directors, "  a.p = go_val;\n", NULL);
       Printv(f_c_directors, "  crosscall2(", wname, ", &a, (int) sizeof a);\n", NULL);
 
@@ -4154,7 +4176,6 @@ private:
 
     Wrapper *dummy = NewWrapper();
     emit_attach_parmmaps(parms, dummy);
-    DelWrapper(dummy);
 
     Swig_typemap_attach_parms("gotype", parms, NULL);
     Swig_typemap_attach_parms("imtype", parms, NULL);
@@ -4210,6 +4231,8 @@ private:
     Swig_typemap_attach_parms("godirectorin", parms, w);
     Swig_typemap_attach_parms("goin", parms, dummy);
     Swig_typemap_attach_parms("goargout", parms, dummy);
+
+    DelWrapper(dummy);
 
     if (!is_ignored) {
       // We use an interface to see if this method is defined in Go.
@@ -5116,7 +5139,7 @@ private:
 	Delete(rname);
       }
 
-      Printv(w->code, "  } swig_a;\n", NULL);
+      Printv(w->code, "  } SWIGSTRUCTPACKED swig_a;\n", NULL);
       Printv(w->code, "  swig_a.go_val = go_val;\n", NULL);
 
       p = parms;

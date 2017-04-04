@@ -1,15 +1,23 @@
 #!/bin/bash
+
+set -e # exit on failure
+
 lsb_release -a
 sudo apt-get -qq update
 
 if [[ "$CC" == gcc-5 ]]; then
 	sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-	sudo add-apt-repository -y ppa:boost-latest/ppa
 	sudo apt-get -qq update
-	sudo apt-get install -qq g++-5 libboost1.55-dev
-else
-	sudo apt-get -qq install libboost-dev
+	sudo apt-get install -qq g++-5
+elif [[ "$CC" == gcc-6 ]]; then
+	sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+	sudo apt-get -qq update
+	sudo apt-get install -qq g++-6
 fi
+
+sudo apt-get -qq install libboost-dev
+
+WITHLANG=$SWIGLANG
 
 case "$SWIGLANG" in
 	"")     ;;
@@ -21,10 +29,6 @@ case "$SWIGLANG" in
 		sudo dpkg -i dmd_2.066.0-0_amd64.deb
 		;;
 	"go")
-		# Until configure.ac is fixed
-		go env | sed -e 's/^/export /' > goenvsetup
-		source goenvsetup
-		rm -f goenvsetup
 		;;
 	"javascript")
 		case "$ENGINE" in
@@ -46,7 +50,13 @@ case "$SWIGLANG" in
 		sudo apt-get -qq install guile-2.0-dev
 		;;
 	"lua")
-		sudo apt-get -qq install lua5.1 liblua5.1-dev
+		if [[ -z "$VER" ]]; then
+			sudo apt-get -qq install lua5.1 liblua5.1-dev
+		else
+			sudo add-apt-repository -y ppa:ubuntu-cloud-archive/mitaka-staging
+			sudo apt-get -qq update
+			sudo apt-get -qq install lua${VER} liblua${VER}-dev
+		fi
 		;;
 	"ocaml")
 		# configure also looks for ocamldlgen, but this isn't packaged.  But it isn't used by default so this doesn't matter.
@@ -75,15 +85,21 @@ case "$SWIGLANG" in
 		if [[ "$PY3" ]]; then
 			sudo apt-get install -qq python3-dev
 		fi
+		WITHLANG=$SWIGLANG$PY3
 		if [[ "$VER" ]]; then
 			sudo add-apt-repository -y ppa:fkrull/deadsnakes
 			sudo apt-get -qq update
 			sudo apt-get -qq install python${VER}-dev
-			CONFIGOPTS+=("--with-python${PY3}=python${VER}");
+			WITHLANG=$SWIGLANG$PY3=$SWIGLANG$VER
 		fi
 		;;
 	"r")
 		sudo apt-get -qq install r-base
+		;;
+	"ruby")
+		if [[ "$VER" ]]; then
+			rvm install $VER
+		fi
 		;;
 	"scilab")
 		sudo apt-get -qq install scilab

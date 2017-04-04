@@ -1,14 +1,11 @@
-import naturalvar.*
+f = naturalvar.Foo();
+b = naturalvar.Bar();
 
-f = Foo();
-b = Bar();
+b.f(f);
 
-b.f = f;
+naturalvar.s('hello');
+b.s('hello');
 
-cvar.s = 'hello';
-b.s = 'hello';
-
-if (b.s ~= cvar.s)
+if (b.s ~= naturalvar.s)
     error
 end
-

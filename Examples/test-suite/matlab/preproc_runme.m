@@ -1,6 +1,4 @@
-import preproc.*
-
-if (preproc.endif ~= 1)
+if (preproc.endif_ ~= 1)
   error('failed')
 end
 
@@ -15,4 +13,3 @@ end
 if (2*preproc.one ~= preproc.two)
   error('failed')
 end
-

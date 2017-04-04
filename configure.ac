@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl The macros which aren't shipped with the autotools are stored in the
 dnl Tools/config directory in .m4 files.
 
-AC_INIT([swig],[3.0.9],[http://www.swig.org])
+AC_INIT([swig],[3.0.11],[http://www.swig.org])
 
 dnl NB: When this requirement is increased to 2.60 or later, AC_PROG_SED
 dnl     definition below can be removed
@@ -598,7 +598,7 @@ if test x"${PYBIN}" = xno; then
 else
   # First figure out the name of the Python executable
   if test "x$PYBIN" = xyes; then
-    AC_CHECK_PROGS(PYTHON, [python python2.8 python2.7 python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0 python1.6 python1.5 python1.4])
+    AC_CHECK_PROGS(PYTHON, [python python2.8 python2.7 python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0])
   else
     PYTHON="$PYBIN"
   fi
@@ -1085,6 +1085,123 @@ AC_SUBST(OCTAVE_CXXFLAGS)
 AC_SUBST(OCTAVE_LDFLAGS)
 
 #----------------------------------------------------------------
+# Look for MATLAB or Octave
+#----------------------------------------------------------------
+
+MATLABBIN=
+AC_ARG_WITH([matlab], AS_HELP_STRING([--without-matlab], [Disable Matlab])
+AS_HELP_STRING([--with-matlab=path], [specify location of MATLAB or Octave installation]),[MATLABBIN="$withval"], [MATLABBIN="$alllang_default"])
+
+# Do we want to use Octave to test the MATLAB module?
+AC_ARG_ENABLE([octave-for-matlab],
+	AS_HELP_STRING([--enable-octave-for-matlab], [Use Octave to test the MATLAB/Octave bilingual module (default disabled)]), [enable_octave_for_matlab=$enableval], [enable_octave_for_matlab=no])
+
+# Unset by default
+MATLAB=
+MATLAB_MEX=
+MATLAB_EXT=
+MATLAB_CFLAGS=
+MATLAB_CXXFLAGS=
+MATLAB_LDFLAGS=
+MATLAB_OPTS=
+MATLAB_EXEC=
+
+# First, check for "--without-matlab" or "--with-matlab=no".
+if test x"${MATLABBIN}" = xno; then
+   AC_MSG_NOTICE([Disabling MATLAB/Octave bilingual module])
+elif test "x$enable_octave_for_matlab" = "xyes"; then
+   AC_MSG_NOTICE([Using Octave to test the MATLAB/Octave module])
+   MATLAB_OPTS="--no-gui"
+   MATLAB_EXEC="--eval"
+
+    # First figure out what the name of Octave is
+    if test "x$MATLABBIN" = xyes; then
+       AC_PATH_PROG(MATLAB, [octave])
+    else
+       MATLAB="$MATLABBIN"
+    fi
+
+    if test -n "$MATLAB"; then
+       AC_MSG_CHECKING([for mkoctfile])
+       mkoctfile="$(dirname $MATLAB)/$(basename $MATLAB | sed -e 's/octave/mkoctfile/')"
+       AS_IF([test -x "${mkoctfile}"],[
+	  AC_MSG_RESULT([${mkoctfile}])
+       ],[
+	  AC_MSG_RESULT([not found, disabling MATLAB/Octave bilingual module])
+       ])
+    fi
+    if test -n "$MATLAB"; then
+       MATLAB_EXT=.mex
+       MATLAB_CFLAGS=`${mkoctfile} -p ALL_CFLAGS`
+       MATLAB_CXXFLAGS=`${mkoctfile} -p ALL_CXXFLAGS`
+       MATLAB_LDFLAGS=`${mkoctfile} -p ALL_LDFLAGS`
+    fi
+
+else 
+  AC_MSG_NOTICE([Using MATLAB to test the MATLAB/Octave module])
+  MATLAB_OPTS="-nodisplay -nojvm"
+  MATLAB_EXEC="-r"
+
+   if test "x$MATLABBIN" = xyes; then
+    # Try to detect matlab home automatically
+    AC_MSG_CHECKING([for matlab installation])
+    # First figure out what the name of Matlab is
+    AC_PATH_PROG(MATLAB, [matlab], [])
+    if test  x"$MATLAB" = x; then
+      AC_MSG_RESULT([no, Disabling Matlab])
+    else
+      # follow symbolic link
+      # JDK defined a macro BASIC_REMOVE_SYMBOLIC_LINKS that might be more portable
+      if test -L "$MATLAB"; then
+	# matlab is a symbolic link, follow it
+	MATLAB=`ls -l "$MATLAB" | awk '{print $NF}'`
+      fi
+      # strip matlab and bin to find home
+      MATLAB_HOME=`dirname "$MATLAB"`
+      MATLAB_HOME=`dirname "$MATLAB_HOME"`
+      AC_MSG_RESULT([found matlab home: $MATLAB_HOME])
+    fi
+  else
+    MATLAB_HOME="$MATLABBIN"
+    AC_MSG_RESULT([looking for matlab in: $MATLAB_HOME])
+    AC_PATH_PROG(MATLAB, [matlab], [notfound], [$MATLAB_HOME/bin])
+    if test  x"$MATLAB" = xnotfound; then
+      AC_MSG_RESULT([matlab executable not found, Disabling Matlab])
+      MATLAB=
+    fi
+  fi
+  if test x"$MATLAB" != x; then
+      AC_MSG_CHECKING([for Matlab mex command])
+      AC_PATH_PROG(MATLAB_MEX, [mex], [], [$MATLAB_HOME/bin$PATH_SEPARATOR$PATH])
+      if test x"$MATLAB_MEX" = x; then
+	AC_MSG_WARN([Cannot find mex command. Disabling matlab])
+	MATLAB=
+      fi
+    fi
+
+    if test x"$MATLAB" != x; then
+      AC_MSG_CHECKING([for Matlab mexext command])
+      AC_PATH_PROG(MATLAB_MEXEXT, [mexext], [], [$MATLAB_HOME/bin$PATH_SEPARATOR$PATH])
+      if test x"$MATLAB_MEXEXT" = x; then
+	AC_MSG_WARN([Cannot find mexext command. Disabling matlab])
+	MATLAB=
+      else
+	MATLAB_EXT=`"$MATLAB_MEXEXT"`
+	AC_MSG_RESULT([matlab mex suffix: $MATLAB_EXT])
+      fi
+    fi
+fi
+
+AC_SUBST(MATLAB)
+AC_SUBST(MATLAB_OPTS)
+AC_SUBST(MATLAB_EXEC)
+AC_SUBST(MATLAB_HOME)
+AC_SUBST(MATLAB_MEX)
+AC_SUBST(MATLAB_EXT)
+AC_SUBST(MATLAB_CFLAGS)
+AC_SUBST(MATLAB_CXXFLAGS)
+AC_SUBST(MATLAB_LDFLAGS)
+
 # Look for Scilab
 #----------------------------------------------------------------
 
@@ -1169,79 +1286,6 @@ AC_SUBST(SCILAB)
 AC_SUBST(SCILABINCLUDE)
 AC_SUBST(SCILABOPT)
 
-#----------------------------------------------------------------
-# Look for Matlab
-#----------------------------------------------------------------
-
-# Try to detect if there is matlab installed on the system and set the
-# MATLAB_HOME, MATLAB and MATLAB_MEXSUFFIX variable
-
-AC_ARG_WITH([matlab], AS_HELP_STRING([--without-matlab], [Disable Matlab])
-AS_HELP_STRING([--with-matlab=path], [specify location of matlab installation for the matlab interface.  The "mex" compiler should be in MATLAB_HOME/bin]),[use_matlab=$withval], [use_matlab=yes])
-
-# First, check for "--without-matlab" or "--with-matlab=no".
-if test x"${use_matlab}" = xno -o x"${with_alllang}" = xno ; then
-   AC_MSG_NOTICE([Disabling Matlab per request])
-   MATLAB=
-else   
-
-  if test x"$use_matlab" = xyes; then
-    # Try to detect matlab home automatically
-    AC_MSG_CHECKING([for matlab installation])
-    # First figure out what the name of Matlab is
-    AC_PATH_PROG(MATLAB, [matlab], [])
-    if test  x"$MATLAB" = x; then
-      AC_MSG_RESULT([no, Disabling Matlab])
-    else
-      # follow symbolic link
-      # JDK defined a macro BASIC_REMOVE_SYMBOLIC_LINKS that might be more portable
-      if test -L "$MATLAB"; then
-        # matlab is a symbolic link, follow it
-        MATLAB=`ls -l "$MATLAB" | awk '{print $NF}'`
-      fi
-      # strip matlab and bin to find home
-      MATLAB_HOME=`dirname "$MATLAB"`
-      MATLAB_HOME=`dirname "$MATLAB_HOME"`
-      AC_MSG_RESULT([found matlab home: $MATLAB_HOME])
-    fi
-  else
-    MATLAB_HOME="$use_matlab"
-    AC_MSG_RESULT([looking for matlab in: $MATLAB_HOME])
-    AC_PATH_PROG(MATLAB, [matlab], [notfound], [$MATLAB_HOME/bin])
-    if test  x"$MATLAB" = xnotfound; then
-      AC_MSG_RESULT([matlab executable not found, Disabling Matlab])
-      MATLAB=
-    fi
-  fi
-fi
-
-MATLAB_MEX=
-if test x"$MATLAB" != x; then
-  AC_MSG_CHECKING([for Matlab mex command])
-  AC_PATH_PROG(MATLAB_MEX, [mex], [], [$MATLAB_HOME/bin$PATH_SEPARATOR$PATH])
-  if test x"$MATLAB_MEX" = x; then
-    AC_MSG_WARN([Cannot find mex command. Disabling matlab])
-    MATLAB=
-  fi
-fi
-
-MATLAB_MEXSUFFIX=
-if test x"$MATLAB" != x; then
-  AC_MSG_CHECKING([for Matlab mexext command])
-  AC_PATH_PROG(MATLAB_MEXEXT, [mexext], [], [$MATLAB_HOME/bin$PATH_SEPARATOR$PATH])
-  if test x"$MATLAB_MEXEXT" = x; then
-    AC_MSG_WARN([Cannot find mexext command. Disabling matlab])
-    MATLAB=
-  else
-    MATLAB_MEXSUFFIX=`"$MATLAB_MEXEXT"`
-    AC_MSG_RESULT([matlab mex suffix: $MATLAB_MEXSUFFIX])
-  fi
-fi
-
-AC_SUBST(MATLAB)
-AC_SUBST(MATLAB_HOME)
-AC_SUBST(MATLAB_MEX)
-AC_SUBST(MATLAB_MEXSUFFIX)
 
 #----------------------------------------------------------------
 # Look for java
@@ -1450,6 +1494,8 @@ if test -n "$JAVAC"; then
   JAVAC=\"$JAVAC\"
 fi
 
+# Turned off due to spurious warnings in later versions of openjdk-1.8
+# JAVAFLAGS=-Xcheck:jni
 
 AC_SUBST(JAVA)
 AC_SUBST(JAVAC)
@@ -1459,6 +1505,7 @@ AC_SUBST(JAVALIBRARYPREFIX)
 AC_SUBST(JAVASO)
 AC_SUBST(JAVALDSHARED)
 AC_SUBST(JAVACXXSHARED)
+AC_SUBST(JAVAFLAGS)
 AC_SUBST(JAVACFLAGS)
 
 #----------------------------------------------------------------
@@ -1495,7 +1542,7 @@ else
   # Look for Node.js which is the default Javascript engine
   #----------------------------------------------------------------
 
-  AC_CHECK_PROGS(NODEJS, node)
+  AC_CHECK_PROGS(NODEJS, [nodejs node])
 
   if test -n "$NODEJS"; then
     # node-gyp is needed to run the test-suite/examples
@@ -1861,6 +1908,7 @@ AC_MSG_CHECKING(for Ruby header files)
 if test -n "$RUBY"; then
         # Try Ruby1.9+ first
         RUBYDIR=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["rubyhdrdir"]] || $rubyhdrdir') 2>/dev/null`
+        RUBYARCHHDRDIR=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["rubyarchhdrdir"]] || $rubyarchhdrdir') 2>/dev/null`
 	if test x"$RUBYDIR" = x"" || test x"$RUBYDIR" = x"nil"; then
 		RUBYDIR=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["archdir"]] || $archdir') 2>/dev/null`
         else
@@ -1873,6 +1921,8 @@ if test -n "$RUBY"; then
 			if test -r $i/ruby.h; then
 				if test x"$RUBYARCH" = x""; then
 					RUBYINCLUDE="-I$i"
+				elif test -n "$RUBYARCHHDRDIR"; then
+					RUBYINCLUDE="-I$i -I$RUBYARCHHDRDIR"
 				else
 					RUBYINCLUDE="-I$i -I$i/$RUBYARCH"
 				fi
@@ -1887,9 +1937,10 @@ if test -n "$RUBY"; then
 		# Find library and path for linking.
 		AC_MSG_CHECKING(for Ruby library)
 		RUBYLIB=""
+		rb_archlibdir=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["archlibdir"]]') 2>/dev/null`
 		rb_libdir=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["libdir"]]') 2>/dev/null`
 		rb_bindir=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["bindir"]]') 2>/dev/null`
-		dirs="$dirs $rb_libdir $rb_bindir"
+		dirs="$dirs $rb_archlibdir $rb_libdir $rb_bindir"
 
         rb_libruby=`($RUBY -rrbconfig -e 'print RbConfig::CONFIG[["LIBRUBY_A"]]') 2>/dev/null`
         RUBYLINK=`($RUBY -rrbconfig -e '
@@ -2000,8 +2051,10 @@ else
 	  AC_MSG_RESULT(not found)
 	fi
 	;;
+    "")
+        AC_MSG_RESULT([could not find $PHPCONFIG or obtain PHP version from it]) ;;
     *)
-	AC_MSG_RESULT([found PHP $version, but only PHP 5 is supported]) ;;
+	AC_MSG_RESULT([found PHP $php_version, but only PHP 5 is supported]) ;;
     esac
 fi
 AC_SUBST(PHP)
@@ -2368,7 +2421,7 @@ if test "x$LUABIN" = xyes; then
    # The search order should match the include-file and library search
    # orders below (a Lua shared library built for one version may not
    # work with a Lua binary of a different version).
-   AC_PATH_PROGS(LUABIN, [lua5.2 lua5.1 lua])
+   AC_PATH_PROGS(LUABIN, [lua5.4 lua5.3 lua5.2 lua5.1 lua])
 fi
 
 # check version: we need Lua 5.x
@@ -2411,7 +2464,10 @@ if test "$LUABIN"; then
     AC_CHECK_FILE($LUAINCLUDE/lua.h,[LUAFLAGS="$ISYSTEM$LUAINCLUDE"],[LUABIN=])
   else
     LUA_OK="1"
-    AC_CHECK_HEADER(lua.h,[LUAFLAGS=""],[LUA_OK=""])
+    CFLAGS_SAVED=$CFLAGS
+    CFLAGS= # Use empty CFLAGS to avoid failure: "present but cannot be compiled"
+    AC_CHECK_HEADER([lua.h],[LUAFLAGS=""],[LUA_OK=""])
+    CFLAGS=$CFLAGS_SAVED
     # if we didn't get it, going to have to look elsewhere (the hard way)
     if test -z "$LUA_OK"; then
       AC_MSG_CHECKING(for lua.h in other locations)
@@ -2419,7 +2475,7 @@ if test "$LUABIN"; then
       # The ordering of the include directories to search should match
       # the ordering of libraries to search in the library test below.
       inc=/usr/include
-      dirs="$inc/lua5.2 $inc/lua5.1 $inc/lua51 $inc/lua5.0 $inc/lua50 /usr/local/include"
+      dirs="$inc/lua5.4 $inc/lua5.3 $inc/lua5.2 $inc/lua5.1 $inc/lua51 $inc/lua5.0 $inc/lua50 /usr/local/include"
       for i in $dirs; do
         #echo "$i"
         if test -r $i/lua.h; then
@@ -2442,7 +2498,7 @@ if test "$LUABIN"; then
   if test -n "$LUALIB"; then
     AC_CHECK_FILE($LUALIB/liblua.a,[LUALINK="-L$LUALIB -llua"],[LUABIN=])
   else
-    AC_SEARCH_LIBS(lua_close, [lua lua5.2 lua5.1 lua51 lua5.0 lua50], [LUALINK="-l$ac_lib"],[LUABIN=])
+    AC_SEARCH_LIBS(lua_close, [lua lua5.4 lua5.3 lua5.2 lua5.1 lua51 lua5.0 lua50], [LUALINK="-l$ac_lib"],[LUABIN=])
   fi
 
   # adding lualib for lua 5.0
@@ -2581,8 +2637,8 @@ else
     esac
     AC_MSG_CHECKING([whether go version is too old])
     case $go_version in
-    go1.0* | go1 )
-      AC_MSG_RESULT([yes - minimum version is 1.1])
+    go1.1* | go1.0* | go1 )
+      AC_MSG_RESULT([yes - minimum version is 1.2])
       GO=
       GOOPT="-intgosize 32"
       ;;
@@ -3017,10 +3073,10 @@ AC_CONFIG_FILES([
     Examples/test-suite/guile/Makefile
     Examples/test-suite/java/Makefile
     Examples/test-suite/javascript/Makefile
+    Examples/test-suite/matlab/Makefile
     Examples/test-suite/mzscheme/Makefile
     Examples/test-suite/ocaml/Makefile
     Examples/test-suite/octave/Makefile
-    Examples/test-suite/matlab/Makefile
     Examples/test-suite/perl5/Makefile
     Examples/test-suite/php/Makefile
     Examples/test-suite/pike/Makefile
@@ -3091,11 +3147,11 @@ test -n "$SKIP_GUILE"		|| langs="${langs}guile "
 test -n "$SKIP_JAVA"		|| langs="${langs}java "
 test -n "$SKIP_JAVASCRIPT"	|| langs="${langs}javascript "
 test -n "$SKIP_LUA"		|| langs="${langs}lua "
+test -n "$SKIP_MATLAB"		|| langs="${langs}matlab "
 test -n "$SKIP_MODULA3"		|| langs="${langs}modula3 "
 test -n "$SKIP_MZSCHEME"	|| langs="${langs}mzscheme "
 test -n "$SKIP_OCAML"		|| langs="${langs}ocaml "
 test -n "$SKIP_OCTAVE"		|| langs="${langs}octave "
-test -n "$SKIP_MATLAB"		|| langs="${langs}matlab "
 test -n "$SKIP_PERL5"		|| langs="${langs}perl5 "
 test -n "$SKIP_PHP"		|| langs="${langs}php "
 test -n "$SKIP_PIKE"		|| langs="${langs}pike "

@@ -97,33 +97,33 @@ const SpeedClass::speed &      speedTest5(const SpeedClass::speed &s) { return s
 
 typedef enum { NamedAnon1, NamedAnon2 } namedanon;
 
-namedanon                       namedanonTest1(namedanon e) { return e; } 
+namedanon                       namedanonTest1(namedanon e) { return e; }
 
 typedef enum twonamestag { TwoNames1, TwoNames2, TwoNames3 = 33 } twonames;
 
-twonames                        twonamesTest1(twonames e) { return e; } 
-twonamestag                     twonamesTest2(twonamestag e) { return e; } 
-enum twonamestag                twonamesTest3(enum twonamestag e) { return e; } 
+twonames                        twonamesTest1(twonames e) { return e; }
+twonamestag                     twonamesTest2(twonamestag e) { return e; }
+enum twonamestag                twonamesTest3(enum twonamestag e) { return e; }
 
 struct TwoNamesStruct {
   typedef enum twonamestag { TwoNamesStruct1, TwoNamesStruct2 } twonames;
-  twonames                      twonamesTest1(twonames e) { return e; } 
-  twonamestag                   twonamesTest2(twonamestag e) { return e; } 
-  enum twonamestag              twonamesTest3(enum twonamestag e) { return e; } 
+  twonames                      twonamesTest1(twonames e) { return e; }
+  twonamestag                   twonamesTest2(twonamestag e) { return e; }
+  enum twonamestag              twonamesTest3(enum twonamestag e) { return e; }
 };
 
 namespace AnonSpace{
   typedef enum { NamedAnonSpace1, NamedAnonSpace2 } namedanonspace;
-  namedanonspace                namedanonspaceTest1(namedanonspace e) { return e; } 
-  AnonSpace::namedanonspace     namedanonspaceTest2(AnonSpace::namedanonspace e) { return e; } 
+  namedanonspace                namedanonspaceTest1(namedanonspace e) { return e; }
+  AnonSpace::namedanonspace     namedanonspaceTest2(AnonSpace::namedanonspace e) { return e; }
 }
-AnonSpace::namedanonspace       namedanonspaceTest3(AnonSpace::namedanonspace e) { return e; } 
+AnonSpace::namedanonspace       namedanonspaceTest3(AnonSpace::namedanonspace e) { return e; }
 using namespace AnonSpace;
-namedanonspace                  namedanonspaceTest4(namedanonspace e) { return e; } 
+namedanonspace                  namedanonspaceTest4(namedanonspace e) { return e; }
 
 
 template<typename T> struct TemplateClass {
-  enum scientists { einstein, galileo = 10 }; 
+  enum scientists { einstein, galileo = 10 };
   typedef enum scientists scientiststd1;
   typedef scientists scientiststd2;
   typedef scientiststd1 scientiststd3;
@@ -160,7 +160,7 @@ const TemplateClass<int>::scientiststd3 &   scientistsTest8(const TemplateClass<
 
 namespace Name {
 template<typename T> struct TClass {
-  enum scientists { faraday, bell = 20 }; 
+  enum scientists { faraday, bell = 20 };
   typedef enum scientists scientiststd1;
   typedef scientists scientiststd2;
   typedef scientiststd1 scientiststd3;
@@ -585,7 +585,62 @@ enum {
 };
 int globalDifferentTypesTest(int n) { return n; }
 }
+%}
 
+#if defined(SWIGCSHARP)
+%csconstvalue("1") globalenumchar1;
+%csconstvalue("'B'") globalenumcharB;
+%csconstvalue("1") enumchar1;
+%csconstvalue("'B'") enumcharB;
+#endif
+%inline %{
+#if defined(__clang__)
+#pragma clang diagnostic push
+// Suppress: illegal character encoding in character literal
+#pragma clang diagnostic ignored "-Winvalid-source-encoding"
+#endif
+
+enum {
+  globalenumchar0 = '\0',
+  globalenumchar1 = '\1',
+  globalenumchar2 = '\n',
+  globalenumcharA = 'A',
+  globalenumcharB = '\102', // B
+  globalenumcharC = '\x43', // C
+  globalenumcharD = 0x44, // D
+  globalenumcharE = 69,  // E
+  globalenumcharAE1 = 'Æ', // AE (latin1 encoded)
+  globalenumcharAE2 = '\306', // AE (latin1 encoded)
+  globalenumcharAE3 = '\xC6' // AE (latin1 encoded)
+};
+enum EnumChar {
+  enumchar0 = '\0',
+  enumchar1 = '\1',
+  enumchar2 = '\n',
+  enumcharA = 'A',
+  enumcharB = '\102', // B
+  enumcharC = '\x43', // C
+  enumcharD = 0x44, // D
+  enumcharE = 69, // E
+  enumcharAE1 = 'Æ', // AE (latin1 encoded)
+  enumcharAE2 = '\306', // AE (latin1 encoded)
+  enumcharAE3 = '\xC6' // AE (latin1 encoded)
+};
+struct EnumCharStruct {
+  enum EnumChar {
+    enumchar0 = '\0',
+    enumchar1 = '\1',
+    enumchar2 = '\n',
+    enumcharA = 'A',
+    enumcharB = '\102', // B
+    enumcharC = '\x43', // C
+    enumcharD = 0x44, // D
+    enumcharE = 69, // E
+    enumcharAE1 = 'Æ', // AE (latin1 encoded)
+    enumcharAE2 = '\306', // AE (latin1 encoded)
+    enumcharAE3 = '\xC6' // AE (latin1 encoded)
+  };
+};
 %}
 
 #if defined(SWIGJAVA)
@@ -593,6 +648,53 @@ int globalDifferentTypesTest(int n) { return n; }
 #elif defined(SWIGCSHARP)
 %csconst(0);
 #endif
+
+%inline %{
+enum {
+  x_globalenumchar0 = '\0',
+  x_globalenumchar1 = '\1',
+  x_globalenumchar2 = '\n',
+  x_globalenumcharA = 'A',
+  x_globalenumcharB = '\102', // B
+  x_globalenumcharC = '\x43', // C
+  x_globalenumcharD = 0x44, // D
+  x_globalenumcharE = 69,  // E
+  x_globalenumcharAE1 = 'Æ', // AE (latin1 encoded)
+  x_globalenumcharAE2 = '\306', // AE (latin1 encoded)
+  x_globalenumcharAE3 = '\xC6' // AE (latin1 encoded)
+};
+enum X_EnumChar {
+  x_enumchar0 = '\0',
+  x_enumchar1 = '\1',
+  x_enumchar2 = '\n',
+  x_enumcharA = 'A',
+  x_enumcharB = '\102', // B
+  x_enumcharC = '\x43', // C
+  x_enumcharD = 0x44, // D
+  x_enumcharE = 69, // E
+  x_enumcharAE1 = 'Æ', // AE (latin1 encoded)
+  x_enumcharAE2 = '\306', // AE (latin1 encoded)
+  x_enumcharAE3 = '\xC6' // AE (latin1 encoded)
+};
+struct X_EnumCharStruct {
+  enum X_EnumChar {
+    enumchar0 = '\0',
+    enumchar1 = '\1',
+    enumchar2 = '\n',
+    enumcharA = 'A',
+    enumcharB = '\102', // B
+    enumcharC = '\x43', // C
+    enumcharD = 0x44, // D
+    enumcharE = 69, // E
+    enumcharAE1 = 'Æ', // AE (latin1 encoded)
+    enumcharAE2 = '\306', // AE (latin1 encoded)
+    enumcharAE3 = '\xC6' // AE (latin1 encoded)
+  };
+};
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+%}
 
 %inline %{
 namespace DifferentSpace {
@@ -614,5 +716,4 @@ enum {
   global_typedefaultint_noconst
 };
 }
-
 %}

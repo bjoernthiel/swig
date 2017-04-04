@@ -1,4 +1,3 @@
-import ctypes
 import sys
 from primitive_types import *
 
@@ -443,6 +442,11 @@ if v != 4:
 # Check the bounds for converting various types
 #
 
+# ctypes not available until 2.5
+if sys.version_info[0:2] <= (2, 4):
+    sys.exit(0)
+import ctypes
+
 # Get the minimum and maximum values that fit in signed char, short, int, long, and long long
 overchar = 2 ** 7
 while ctypes.c_byte(overchar).value > 0:
@@ -573,3 +577,35 @@ if val_double(sys.maxint + 1) != float(sys.maxint + 1):
     raise RuntimeError, "bad double typemap"
 if val_double(-sys.maxint - 2) != float(-sys.maxint - 2):
     raise RuntimeError, "bad double typemap"
+
+
+# Check the minimum and maximum values that fit in ptrdiff_t and size_t
+def checkType(name, maxfunc, maxval, minfunc, minval, echofunc):
+    if maxfunc() != maxval:
+        raise RuntimeError, "bad " + name + " typemap"
+    if minfunc() != minval:
+        raise RuntimeError, "bad " + name + " typemap"
+    if echofunc(maxval) != maxval:
+        raise RuntimeError, "bad " + name + " typemap"
+    if echofunc(minval) != minval:
+        raise RuntimeError, "bad " + name + " typemap"
+    error = 0
+    try:
+        echofunc(maxval + 1)
+        error = 1
+    except OverflowError:
+        pass
+    if error == 1:
+        raise RuntimeError, "bad " + name + " typemap"
+    try:
+        echofunc(minval - 1)
+        error = 1
+    except OverflowError:
+        pass
+    if error == 1:
+        raise RuntimeError, "bad " + name + " typemap"
+
+# sys.maxsize is the largest value supported by Py_ssize_t, which should be the same as ptrdiff_t
+if sys.version_info[0:2] >= (2, 6):
+    checkType("ptrdiff_t", get_ptrdiff_max, sys.maxsize,           get_ptrdiff_min, -(sys.maxsize + 1), ptrdiff_echo)
+    checkType("size_t",    get_size_max,    (2 * sys.maxsize) + 1, get_size_min,    0,                  size_echo)
