@@ -1,29 +1,57 @@
 Below are the changes for the current release.
 See the CHANGES file for changes in older releases.
 See the RELEASENOTES file for a summary of changes in each release.
+Issue # numbers mentioned below can be found on Github. For more details, add
+the issue number to the end of the URL: https://github.com/swig/swig/issues/
 
-Version 3.0.11 (in progress)
+Version 3.0.13 (in progress)
 ============================
 
-2016-06-26: wkalinin
-            [Java, C#] Patch #681 Fix seg fault when ignoring nested classes.
+2017-02-29: tamuratak
+            [Ruby] #917 - Add Enumerable module to all container class wrappers. It was missing
+            for std::list, std::multiset, std::unordered_multiset and std::unordered_map.
 
-2016-06-25: mromberg
-            [Python] #711 Fix -castmode and conversion of signed and unsigned integer types.
-            See 2015-12-23 CHANGES entry for details of these improvements when they were
-            implemented for the default options (ie not using -castmode).
+2017-03-24: tamuratak 
+            [Ruby] Fix #939 - Wrapping std::vector<bool> fix due to incorrect null checks
+            on VALUE obj.
 
-2016-06-25: ahnolds
-            Patch #730 - Fix %implicitconv for overloaded functions when using
-            -castmode or -fastdispatch options.
+2017-03-17: wsfulton
+            [Go] Fix handling of typedef'd function pointers and typedef'd member function pointers
+            such as:
 
-            The result is that in all overload cases where there are multiple possibilities
-            with the same number of arguments, the dispatch function will first check for
-            exact (aka non implicit) matches, and then subsequently check for implicit
-            casting matches. This was already happening in the normal dispatch situation,
-            and in the -fastdispatch case two passes through the candidates were happening,
-            just with SWIG_POINTER_IMPLICIT_CONV always set. After this patch, it is not set
-            on the first pass, and then set on the second pass.
+              typedef int (*FnPtr_td)(int, int);
+              int do_op(int x, int y, FnPtr_td op);
 
-2016-06-25: liorgold
-            Patch #727 - Add support for C++11 type aliasing.
+2017-03-16: wsfulton
+            Add support for member const function pointers such as:
+
+              int fn(short (Funcs::* parm)(bool)) const;
+
+            Also fix parsing of references/pointers and qualifiers to member
+            pointers such as:
+
+              int fn(short (Funcs::* const parm)(bool));
+              int fn(short (Funcs::* & parm)(bool));
+
+2017-03-10: wsfulton
+            Extend C++11 alternate function syntax parsing to support const and noexcept, such as:
+
+              auto sum1(int x, int y) const -> int { return x + y; }
+              auto sum2(int x, int y) noexcept -> int { return x + y; }
+
+2017-02-27: assambar
+            [C++11] Extend parser to support throw specifier in combination
+            with override and/or final.
+
+2017-02-10: tamuratak
+            [Ruby] #883 - Add support for C++11 hash tables:
+              std::unordered_map
+              std::unordered_set
+              std::unordered_multimap
+              std::unordered_multiset
+
+2017-02-08: jcsharp
+            [C#] #887 Improve std::vector<T> wrapper constructors -
+            Replace constructor taking ICollection with IEnumerable and also add IEnumerable<T>
+            constructor to avoid the boxing and unboxing overhead of the original constructor,
+            when the type parameter is a value type.

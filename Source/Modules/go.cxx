@@ -2445,7 +2445,8 @@ private:
       }
 
       String *code = Copy(Getattr(n, "wrap:action"));
-      Replaceall(code, Getattr(parms, "lname"), current);
+      Replace(code, Getattr(parms, "lname"), current, DOH_REPLACE_ANY | DOH_REPLACE_ID);
+      Delete(current);
       Printv(actioncode, code, "\n", NULL);
     }
 
@@ -2597,6 +2598,14 @@ private:
 
     Replaceall(f->code, "$cleanup", cleanup);
     Delete(cleanup);
+
+    /* See if there is any return cleanup code */
+    String *tm;
+    if ((tm = Swig_typemap_lookup("ret", n, Swig_cresult_name(), 0))) {
+      Replaceall(tm, "$source", Swig_cresult_name());
+      Printf(f->code, "%s\n", tm);
+      Delete(tm);
+    }
 
     Replaceall(f->code, "$symname", Getattr(n, "sym:name"));
   }
@@ -2797,33 +2806,52 @@ private:
       return SWIG_NOWRAP;
     }
 
-    String *get = NewString("");
-    Printv(get, Swig_cresult_name(), " = ", NULL);
-
-    char quote;
-    if (Getattr(n, "wrappedasconstant")) {
-      quote = '\0';
-    } else if (SwigType_type(type) == T_CHAR) {
-      quote = '\'';
-    } else if (SwigType_type(type) == T_STRING) {
-      Printv(get, "(char *)", NULL);
-      quote = '"';
+    String *rawval = Getattr(n, "rawval");
+    if (rawval && Len(rawval)) {
+      // Based on Swig_VargetToFunction
+      String *nname = NewStringf("(%s)", rawval);
+      String *call;
+      if (SwigType_isclass(type)) {
+	call = NewStringf("%s", nname);
+      } else {
+	call = SwigType_lcaststr(type, nname);
+      }
+      String *cres = Swig_cresult(type, Swig_cresult_name(), call);
+      Setattr(n, "wrap:action", cres);
+      Delete(nname);
+      Delete(call);
+      Delete(cres);
     } else {
-      quote = '\0';
+      String *get = NewString("");
+      Printv(get, Swig_cresult_name(), " = ", NULL);
+
+      char quote;
+      if (Getattr(n, "wrappedasconstant")) {
+        quote = '\0';
+      } else if (SwigType_type(type) == T_CHAR) {
+        quote = '\'';
+      } else if (SwigType_type(type) == T_STRING) {
+        Printv(get, "(char *)", NULL);
+        quote = '"';
+      } else {
+        quote = '\0';
+      }
+
+      if (quote != '\0') {
+        Printf(get, "%c", quote);
+      }
+
+      Printv(get, Getattr(n, "value"), NULL);
+
+      if (quote != '\0') {
+        Printf(get, "%c", quote);
+      }
+
+      Printv(get, ";\n", NULL);
+
+      Setattr(n, "wrap:action", get);
+      Delete(get);
     }
-
-    if (quote != '\0') {
-      Printf(get, "%c", quote);
-    }
-
-    Printv(get, Getattr(n, "value"), NULL);
-
-    if (quote != '\0') {
-      Printf(get, "%c", quote);
-    }
-
-    Printv(get, ";\n", NULL);
-    Setattr(n, "wrap:action", get);
 
     String *sname = Copy(symname);
     if (class_name) {
@@ -6213,9 +6241,9 @@ private:
 	Setattr(undefined_enum_types, t, ret);
 	Delete(tt);
       }
-    } else if (SwigType_isfunctionpointer(type) || SwigType_isfunction(type)) {
+    } else if (SwigType_isfunctionpointer(t) || SwigType_isfunction(t)) {
       ret = NewString("_swig_fnptr");
-    } else if (SwigType_ismemberpointer(type)) {
+    } else if (SwigType_ismemberpointer(t)) {
       ret = NewString("_swig_memberptr");
     } else if (SwigType_issimple(t)) {
       Node *cn = classLookup(t);
