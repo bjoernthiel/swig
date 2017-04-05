@@ -105,6 +105,7 @@ set( sources
 	Source/Modules/emit.cxx
 	Source/Modules/go.cxx
 	Source/Modules/guile.cxx
+	Source/Modules/interface.cxx
 	Source/Modules/java.cxx
 	Source/Modules/javascript.cxx
 	Source/Modules/lang.cxx
