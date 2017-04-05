@@ -46,8 +46,7 @@ configure_file(
 	${CMAKE_BINARY_DIR}/Source/Include/swigconfig.h )
 
 if( MSVC )
-	set( ProgramFiles_x86 "ProgramFiles(x86)" )
-	list( APPEND CMAKE_PROGRAM_PATH "$ENV{${ProgramFiles_x86}}/Git/bin" )
+	list( APPEND CMAKE_PROGRAM_PATH C:/msys64/usr/bin )
 endif()
 find_program( bison_EXECUTABLE bison )
 add_custom_command(
