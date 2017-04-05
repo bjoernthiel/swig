@@ -120,6 +120,7 @@ set( sources
 	Source/Modules/overload.cxx
 	Source/Modules/perl5.cxx
 	Source/Modules/php.cxx
+	Source/Modules/php5.cxx
 	Source/Modules/pike.cxx
 	Source/Modules/python.cxx
 	Source/Modules/r.cxx
