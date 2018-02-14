@@ -42,21 +42,29 @@ SWIG_AsVal_dec(bool)(mxArray* pm, bool *val)
       if(mxGetNumberOfElements(pm)!=1) return SWIG_TypeError;
       switch(mxGetClassID(pm)){
       case mxINT8_CLASS:
-        if(val) *val = (long)(*(int8_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(int8_T*)mxGetData(pm));
+        break;
       case mxUINT8_CLASS:
-        if(val) *val = (long)(*(uint8_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(uint8_T*)mxGetData(pm));
+        break;
       case mxINT16_CLASS:
-        if(val) *val = (long)(*(int16_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(int16_T*)mxGetData(pm));
+        break;
       case mxUINT16_CLASS:
-        if(val) *val = (long)(*(uint16_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(uint16_T*)mxGetData(pm));
+        break;
       case mxINT32_CLASS:
-        if(val) *val = (long)(*(int32_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(int32_T*)mxGetData(pm));
+        break;
       case mxUINT32_CLASS:
-        if(val) *val = (long)(*(uint32_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(uint32_T*)mxGetData(pm));
+        break;
       case mxINT64_CLASS:
-        if(val) *val = (long)(*(int64_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(int64_T*)mxGetData(pm));
+        break;
       case mxUINT64_CLASS: 
-        if(val) *val = (long)(*(uint64_T*)mxGetData(pm)); break;
+        if(val) *val = (long)(*(uint64_T*)mxGetData(pm));
+        break;
       case mxDOUBLE_CLASS:
       {
 	double v=mxGetScalar(pm);
@@ -88,21 +96,29 @@ SWIG_AsVal_dec(bool)(mxArray* pm, bool *val)
       if(mxGetNumberOfElements(pm)!=1) return SWIG_TypeError;
       switch(mxGetClassID(pm)){
       case mxINT8_CLASS:
-        if(val) *val = (unsigned long)(*(int8_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(int8_T*)mxGetData(pm));
+        break;
       case mxUINT8_CLASS:
-        if(val) *val = (unsigned long)(*(uint8_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(uint8_T*)mxGetData(pm));
+        break;
       case mxINT16_CLASS:
-        if(val) *val = (unsigned long)(*(int16_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(int16_T*)mxGetData(pm));
+        break;
       case mxUINT16_CLASS:
-        if(val) *val = (unsigned long)(*(uint16_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(uint16_T*)mxGetData(pm));
+        break;
       case mxINT32_CLASS:
-        if(val) *val = (unsigned long)(*(int32_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(int32_T*)mxGetData(pm));
+        break;
       case mxUINT32_CLASS:
-        if(val) *val = (unsigned long)(*(uint32_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(uint32_T*)mxGetData(pm));
+        break;
       case mxINT64_CLASS:
-        if(val) *val = (unsigned long)(*(int64_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(int64_T*)mxGetData(pm));
+        break;
       case mxUINT64_CLASS: 
-        if(val) *val = (unsigned long)(*(uint64_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long)(*(uint64_T*)mxGetData(pm));
+        break;
       case mxDOUBLE_CLASS:
       {
 	double v=mxGetScalar(pm);
@@ -134,21 +150,29 @@ SWIG_AsVal_dec(bool)(mxArray* pm, bool *val)
       if(mxGetNumberOfElements(pm)!=1) return SWIG_TypeError;
       switch(mxGetClassID(pm)){
       case mxINT8_CLASS:
-        if(val) *val = (long long)(*(int8_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(int8_T*)mxGetData(pm));
+        break;
       case mxUINT8_CLASS:
-        if(val) *val = (long long)(*(uint8_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(uint8_T*)mxGetData(pm));
+        break;
       case mxINT16_CLASS:
-        if(val) *val = (long long)(*(int16_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(int16_T*)mxGetData(pm));
+        break;
       case mxUINT16_CLASS:
-        if(val) *val = (long long)(*(uint16_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(uint16_T*)mxGetData(pm));
+        break;
       case mxINT32_CLASS:
-        if(val) *val = (long long)(*(int32_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(int32_T*)mxGetData(pm));
+        break;
       case mxUINT32_CLASS:
-        if(val) *val = (long long)(*(uint32_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(uint32_T*)mxGetData(pm));
+        break;
       case mxINT64_CLASS:
-        if(val) *val = (long long)(*(int64_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(int64_T*)mxGetData(pm));
+        break;
       case mxUINT64_CLASS: 
-        if(val) *val = (long long)(*(uint64_T*)mxGetData(pm)); break;
+        if(val) *val = (long long)(*(uint64_T*)mxGetData(pm));
+        break;
       case mxDOUBLE_CLASS:
       {
 	double v=mxGetScalar(pm);
@@ -177,21 +201,29 @@ SWIG_AsVal_dec(bool)(mxArray* pm, bool *val)
       if(mxGetNumberOfElements(pm)!=1) return SWIG_TypeError;
       switch(mxGetClassID(pm)){
       case mxINT8_CLASS:
-        if(val) *val = (unsigned long long)(*(int8_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(int8_T*)mxGetData(pm));
+        break;
       case mxUINT8_CLASS:
-        if(val) *val = (unsigned long long)(*(uint8_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(uint8_T*)mxGetData(pm));
+        break;
       case mxINT16_CLASS:
-        if(val) *val = (unsigned long long)(*(int16_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(int16_T*)mxGetData(pm));
+        break;
       case mxUINT16_CLASS:
-        if(val) *val = (unsigned long long)(*(uint16_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(uint16_T*)mxGetData(pm));
+        break;
       case mxINT32_CLASS:
-        if(val) *val = (unsigned long long)(*(int32_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(int32_T*)mxGetData(pm));
+        break;
       case mxUINT32_CLASS:
-        if(val) *val = (unsigned long long)(*(uint32_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(uint32_T*)mxGetData(pm));
+        break;
       case mxINT64_CLASS:
-        if(val) *val = (unsigned long long)(*(int64_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(int64_T*)mxGetData(pm));
+        break;
       case mxUINT64_CLASS: 
-        if(val) *val = (unsigned long long)(*(uint64_T*)mxGetData(pm)); break;
+        if(val) *val = (unsigned long long)(*(uint64_T*)mxGetData(pm));
+        break;
       case mxDOUBLE_CLASS:
       {
 	double v=mxGetScalar(pm);
